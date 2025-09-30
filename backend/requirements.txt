@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]>=0.29.0
+python-socketio
+pygame
+stable-baselines3
+pydantic
+gymnasium

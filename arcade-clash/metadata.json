@@ -1,0 +1,5 @@
+{
+  "name": "Arcade Clash",
+  "description": "A dynamic fighting game interface that combines character selection, live match HUDs, move lists, and matchup analysis into a single, seamless web application experience, inspired by classic arcade fighting games.",
+  "requestFramePermissions": []
+}

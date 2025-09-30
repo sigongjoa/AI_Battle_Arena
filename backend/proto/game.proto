@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package game;
+
+message PlayerState {
+  int32 health = 1;
+  int32 super_gauge = 2;
+  int32 position_x = 3;
+  int32 position_y = 4;
+  string current_action = 5;
+}
+
+message GameState {
+  string match_id = 1;
+  int32 timer = 2;
+  PlayerState player1 = 3;
+  PlayerState player2 = 4;
+  optional int32 winner_id = 5; // Use optional for nullable fields
+}
+
+// Request message for streaming game state
+message GameStateRequest {
+  string match_id = 1;
+  int32 player1_id = 2;
+  int32 player2_id = 3;
+}
+
+service GameService {
+  // Server-side streaming RPC to send game state updates
+  rpc StreamGameState(GameStateRequest) returns (stream GameState);
+}

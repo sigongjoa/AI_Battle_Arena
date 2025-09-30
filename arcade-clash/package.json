@@ -1,0 +1,26 @@
+{
+  "name": "arcade-clash",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "google-protobuf": "^3.14.0",
+    "grpc-web": "^2.0.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "browser-headers": "^0.4.0",
+    "rxjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "ts-proto": "^2.7.7",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}
