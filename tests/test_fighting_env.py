@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import gym
+import gymnasium as gym
 import pygame
 
 from src.fighting_env import FightingEnv

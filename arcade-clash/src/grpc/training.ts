@@ -6,10 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import * as grpc from "grpc-web";
-import { BrowserHeaders } from "browser-headers";
-import { Observable } from "rxjs";
-import { share } from "rxjs/operators";
 
 export const protobufPackage = "training";
 
@@ -242,171 +238,22 @@ export const TrainingMetricsRequest: MessageFns<TrainingMetricsRequest> = {
   },
 };
 
-export interface TrainingService {
-  /** Server-side streaming RPC to send training metrics updates */
-  StreamTrainingMetrics(
-    request: DeepPartial<TrainingMetricsRequest>,
-    metadata?: grpc.Metadata,
-  ): Observable<TrainingMetrics>;
-}
 
-export class TrainingServiceClientImpl implements TrainingService {
-  private readonly rpc: Rpc;
-
-  constructor(rpc: Rpc) {
-    this.rpc = rpc;
-    this.StreamTrainingMetrics = this.StreamTrainingMetrics.bind(this);
-  }
-
-  StreamTrainingMetrics(
-    request: DeepPartial<TrainingMetricsRequest>,
-    metadata?: grpc.Metadata,
-  ): Observable<TrainingMetrics> {
-    return this.rpc.invoke(
-      TrainingServiceStreamTrainingMetricsDesc,
-      TrainingMetricsRequest.fromPartial(request),
-      metadata,
-    );
-  }
-}
-
-export const TrainingServiceDesc = { serviceName: "training.TrainingService" };
-
-export const TrainingServiceStreamTrainingMetricsDesc: UnaryMethodDefinitionish = {
-  methodName: "StreamTrainingMetrics",
-  service: TrainingServiceDesc,
-  requestStream: false,
-  responseStream: true,
-  requestType: {
-    serializeBinary() {
-      return TrainingMetricsRequest.encode(this).finish();
+export const TrainingServiceDefinition = {
+  name: "TrainingService",
+  fullName: "training.TrainingService",
+  methods: {
+    /** Server-side streaming RPC to send training metrics updates */
+    streamTrainingMetrics: {
+      name: "StreamTrainingMetrics",
+      requestType: TrainingMetricsRequest,
+      requestStream: false,
+      responseType: TrainingMetrics,
+      responseStream: true,
+      options: {},
     },
-  } as any,
-  responseType: {
-    deserializeBinary(data: Uint8Array) {
-      const value = TrainingMetrics.decode(data);
-      return {
-        ...value,
-        toObject() {
-          return value;
-        },
-      };
-    },
-  } as any,
-};
-
-interface UnaryMethodDefinitionishR extends grpc.UnaryMethodDefinition<any, any> {
-  requestStream: any;
-  responseStream: any;
-}
-
-type UnaryMethodDefinitionish = UnaryMethodDefinitionishR;
-
-interface Rpc {
-  unary<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Promise<any>;
-  invoke<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Observable<any>;
-}
-
-export class GrpcWebImpl {
-  private host: string;
-  private options: {
-    transport?: grpc.TransportFactory;
-    streamingTransport?: grpc.TransportFactory;
-    debug?: boolean;
-    metadata?: grpc.Metadata;
-    upStreamRetryCodes?: number[];
-  };
-
-  constructor(
-    host: string,
-    options: {
-      transport?: grpc.TransportFactory;
-      streamingTransport?: grpc.TransportFactory;
-      debug?: boolean;
-      metadata?: grpc.Metadata;
-      upStreamRetryCodes?: number[];
-    },
-  ) {
-    this.host = host;
-    this.options = options;
-  }
-
-  unary<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    _request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Promise<any> {
-    const request = { ..._request, ...methodDesc.requestType };
-    const maybeCombinedMetadata = metadata && this.options.metadata
-      ? new BrowserHeaders({ ...this.options?.metadata.headersMap, ...metadata?.headersMap })
-      : metadata ?? this.options.metadata;
-    return new Promise((resolve, reject) => {
-      grpc.unary(methodDesc, {
-        request,
-        host: this.host,
-        metadata: maybeCombinedMetadata ?? {},
-        ...(this.options.transport !== undefined ? { transport: this.options.transport } : {}),
-        debug: this.options.debug ?? false,
-        onEnd: function (response) {
-          if (response.status === grpc.Code.OK) {
-            resolve(response.message!.toObject());
-          } else {
-            const err = new GrpcWebError(response.statusMessage, response.status, response.trailers);
-            reject(err);
-          }
-        },
-      });
-    });
-  }
-
-  invoke<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    _request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Observable<any> {
-    const upStreamCodes = this.options.upStreamRetryCodes ?? [];
-    const DEFAULT_TIMEOUT_TIME: number = 3_000;
-    const request = { ..._request, ...methodDesc.requestType };
-    const transport = this.options.streamingTransport ?? this.options.transport;
-    const maybeCombinedMetadata = metadata && this.options.metadata
-      ? new BrowserHeaders({ ...this.options?.metadata.headersMap, ...metadata?.headersMap })
-      : metadata ?? this.options.metadata;
-    return new Observable((observer) => {
-      const upStream = () => {
-        const client = grpc.invoke(methodDesc, {
-          host: this.host,
-          request,
-          ...(transport !== undefined ? { transport } : {}),
-          metadata: maybeCombinedMetadata ?? {},
-          debug: this.options.debug ?? false,
-          onMessage: (next) => observer.next(next),
-          onEnd: (code: grpc.Code, message: string, trailers: grpc.Metadata) => {
-            if (code === 0) {
-              observer.complete();
-            } else if (upStreamCodes.includes(code)) {
-              setTimeout(upStream, DEFAULT_TIMEOUT_TIME);
-            } else {
-              const err = new Error(message) as any;
-              err.code = code;
-              err.metadata = trailers;
-              observer.error(err);
-            }
-          },
-        });
-        observer.add(() => client.close());
-      };
-      upStream();
-    }).pipe(share());
-  }
-}
+  },
+} as const;
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
@@ -422,12 +269,6 @@ export type Exact<P, I extends P> = P extends Builtin ? P
 
 function isSet(value: any): boolean {
   return value !== null && value !== undefined;
-}
-
-export class GrpcWebError extends globalThis.Error {
-  constructor(message: string, public code: grpc.Code, public metadata: grpc.Metadata) {
-    super(message);
-  }
 }
 
 export interface MessageFns<T> {

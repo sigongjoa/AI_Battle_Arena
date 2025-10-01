@@ -6,29 +6,26 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import * as grpc from "grpc-web";
-import { BrowserHeaders } from "browser-headers";
-import { Observable } from "rxjs";
-import { share } from "rxjs/operators";
 
 export const protobufPackage = "game";
 
 export interface PlayerState {
+  id: number;
+  /** e.g., "RYU", "KEN" */
+  character: string;
+  x: number;
+  y: number;
+  /** e.g., "idle", "punch", "kick" */
+  action: string;
+  frame: number;
   health: number;
   superGauge: number;
-  positionX: number;
-  positionY: number;
-  currentAction: string;
 }
 
 export interface GameState {
   matchId: string;
   timer: number;
-  player1?: PlayerState | undefined;
-  player2?:
-    | PlayerState
-    | undefined;
-  /** Use optional for nullable fields */
+  players: PlayerState[];
   winnerId?: number | undefined;
 }
 
@@ -40,25 +37,34 @@ export interface GameStateRequest {
 }
 
 function createBasePlayerState(): PlayerState {
-  return { health: 0, superGauge: 0, positionX: 0, positionY: 0, currentAction: "" };
+  return { id: 0, character: "", x: 0, y: 0, action: "", frame: 0, health: 0, superGauge: 0 };
 }
 
 export const PlayerState: MessageFns<PlayerState> = {
   encode(message: PlayerState, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== 0) {
+      writer.uint32(8).int32(message.id);
+    }
+    if (message.character !== "") {
+      writer.uint32(18).string(message.character);
+    }
+    if (message.x !== 0) {
+      writer.uint32(24).int32(message.x);
+    }
+    if (message.y !== 0) {
+      writer.uint32(32).int32(message.y);
+    }
+    if (message.action !== "") {
+      writer.uint32(42).string(message.action);
+    }
+    if (message.frame !== 0) {
+      writer.uint32(48).int32(message.frame);
+    }
     if (message.health !== 0) {
-      writer.uint32(8).int32(message.health);
+      writer.uint32(56).int32(message.health);
     }
     if (message.superGauge !== 0) {
-      writer.uint32(16).int32(message.superGauge);
-    }
-    if (message.positionX !== 0) {
-      writer.uint32(24).int32(message.positionX);
-    }
-    if (message.positionY !== 0) {
-      writer.uint32(32).int32(message.positionY);
-    }
-    if (message.currentAction !== "") {
-      writer.uint32(42).string(message.currentAction);
+      writer.uint32(64).int32(message.superGauge);
     }
     return writer;
   },
@@ -75,15 +81,15 @@ export const PlayerState: MessageFns<PlayerState> = {
             break;
           }
 
-          message.health = reader.int32();
+          message.id = reader.int32();
           continue;
         }
         case 2: {
-          if (tag !== 16) {
+          if (tag !== 18) {
             break;
           }
 
-          message.superGauge = reader.int32();
+          message.character = reader.string();
           continue;
         }
         case 3: {
@@ -91,7 +97,7 @@ export const PlayerState: MessageFns<PlayerState> = {
             break;
           }
 
-          message.positionX = reader.int32();
+          message.x = reader.int32();
           continue;
         }
         case 4: {
@@ -99,7 +105,7 @@ export const PlayerState: MessageFns<PlayerState> = {
             break;
           }
 
-          message.positionY = reader.int32();
+          message.y = reader.int32();
           continue;
         }
         case 5: {
@@ -107,7 +113,31 @@ export const PlayerState: MessageFns<PlayerState> = {
             break;
           }
 
-          message.currentAction = reader.string();
+          message.action = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.frame = reader.int32();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.health = reader.int32();
+          continue;
+        }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.superGauge = reader.int32();
           continue;
         }
       }
@@ -121,30 +151,42 @@ export const PlayerState: MessageFns<PlayerState> = {
 
   fromJSON(object: any): PlayerState {
     return {
+      id: isSet(object.id) ? globalThis.Number(object.id) : 0,
+      character: isSet(object.character) ? globalThis.String(object.character) : "",
+      x: isSet(object.x) ? globalThis.Number(object.x) : 0,
+      y: isSet(object.y) ? globalThis.Number(object.y) : 0,
+      action: isSet(object.action) ? globalThis.String(object.action) : "",
+      frame: isSet(object.frame) ? globalThis.Number(object.frame) : 0,
       health: isSet(object.health) ? globalThis.Number(object.health) : 0,
       superGauge: isSet(object.superGauge) ? globalThis.Number(object.superGauge) : 0,
-      positionX: isSet(object.positionX) ? globalThis.Number(object.positionX) : 0,
-      positionY: isSet(object.positionY) ? globalThis.Number(object.positionY) : 0,
-      currentAction: isSet(object.currentAction) ? globalThis.String(object.currentAction) : "",
     };
   },
 
   toJSON(message: PlayerState): unknown {
     const obj: any = {};
+    if (message.id !== 0) {
+      obj.id = Math.round(message.id);
+    }
+    if (message.character !== "") {
+      obj.character = message.character;
+    }
+    if (message.x !== 0) {
+      obj.x = Math.round(message.x);
+    }
+    if (message.y !== 0) {
+      obj.y = Math.round(message.y);
+    }
+    if (message.action !== "") {
+      obj.action = message.action;
+    }
+    if (message.frame !== 0) {
+      obj.frame = Math.round(message.frame);
+    }
     if (message.health !== 0) {
       obj.health = Math.round(message.health);
     }
     if (message.superGauge !== 0) {
       obj.superGauge = Math.round(message.superGauge);
-    }
-    if (message.positionX !== 0) {
-      obj.positionX = Math.round(message.positionX);
-    }
-    if (message.positionY !== 0) {
-      obj.positionY = Math.round(message.positionY);
-    }
-    if (message.currentAction !== "") {
-      obj.currentAction = message.currentAction;
     }
     return obj;
   },
@@ -154,17 +196,20 @@ export const PlayerState: MessageFns<PlayerState> = {
   },
   fromPartial<I extends Exact<DeepPartial<PlayerState>, I>>(object: I): PlayerState {
     const message = createBasePlayerState();
+    message.id = object.id ?? 0;
+    message.character = object.character ?? "";
+    message.x = object.x ?? 0;
+    message.y = object.y ?? 0;
+    message.action = object.action ?? "";
+    message.frame = object.frame ?? 0;
     message.health = object.health ?? 0;
     message.superGauge = object.superGauge ?? 0;
-    message.positionX = object.positionX ?? 0;
-    message.positionY = object.positionY ?? 0;
-    message.currentAction = object.currentAction ?? "";
     return message;
   },
 };
 
 function createBaseGameState(): GameState {
-  return { matchId: "", timer: 0, player1: undefined, player2: undefined, winnerId: undefined };
+  return { matchId: "", timer: 0, players: [], winnerId: undefined };
 }
 
 export const GameState: MessageFns<GameState> = {
@@ -175,14 +220,11 @@ export const GameState: MessageFns<GameState> = {
     if (message.timer !== 0) {
       writer.uint32(16).int32(message.timer);
     }
-    if (message.player1 !== undefined) {
-      PlayerState.encode(message.player1, writer.uint32(26).fork()).join();
-    }
-    if (message.player2 !== undefined) {
-      PlayerState.encode(message.player2, writer.uint32(34).fork()).join();
+    for (const v of message.players) {
+      PlayerState.encode(v!, writer.uint32(26).fork()).join();
     }
     if (message.winnerId !== undefined) {
-      writer.uint32(40).int32(message.winnerId);
+      writer.uint32(32).int32(message.winnerId);
     }
     return writer;
   },
@@ -215,19 +257,11 @@ export const GameState: MessageFns<GameState> = {
             break;
           }
 
-          message.player1 = PlayerState.decode(reader, reader.uint32());
+          message.players.push(PlayerState.decode(reader, reader.uint32()));
           continue;
         }
         case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.player2 = PlayerState.decode(reader, reader.uint32());
-          continue;
-        }
-        case 5: {
-          if (tag !== 40) {
+          if (tag !== 32) {
             break;
           }
 
@@ -247,8 +281,7 @@ export const GameState: MessageFns<GameState> = {
     return {
       matchId: isSet(object.matchId) ? globalThis.String(object.matchId) : "",
       timer: isSet(object.timer) ? globalThis.Number(object.timer) : 0,
-      player1: isSet(object.player1) ? PlayerState.fromJSON(object.player1) : undefined,
-      player2: isSet(object.player2) ? PlayerState.fromJSON(object.player2) : undefined,
+      players: globalThis.Array.isArray(object?.players) ? object.players.map((e: any) => PlayerState.fromJSON(e)) : [],
       winnerId: isSet(object.winnerId) ? globalThis.Number(object.winnerId) : undefined,
     };
   },
@@ -261,11 +294,8 @@ export const GameState: MessageFns<GameState> = {
     if (message.timer !== 0) {
       obj.timer = Math.round(message.timer);
     }
-    if (message.player1 !== undefined) {
-      obj.player1 = PlayerState.toJSON(message.player1);
-    }
-    if (message.player2 !== undefined) {
-      obj.player2 = PlayerState.toJSON(message.player2);
+    if (message.players?.length) {
+      obj.players = message.players.map((e) => PlayerState.toJSON(e));
     }
     if (message.winnerId !== undefined) {
       obj.winnerId = Math.round(message.winnerId);
@@ -280,12 +310,7 @@ export const GameState: MessageFns<GameState> = {
     const message = createBaseGameState();
     message.matchId = object.matchId ?? "";
     message.timer = object.timer ?? 0;
-    message.player1 = (object.player1 !== undefined && object.player1 !== null)
-      ? PlayerState.fromPartial(object.player1)
-      : undefined;
-    message.player2 = (object.player2 !== undefined && object.player2 !== null)
-      ? PlayerState.fromPartial(object.player2)
-      : undefined;
+    message.players = object.players?.map((e) => PlayerState.fromPartial(e)) || [];
     message.winnerId = object.winnerId ?? undefined;
     return message;
   },
@@ -383,161 +408,22 @@ export const GameStateRequest: MessageFns<GameStateRequest> = {
   },
 };
 
-export interface GameService {
-  /** Server-side streaming RPC to send game state updates */
-  StreamGameState(request: DeepPartial<GameStateRequest>, metadata?: grpc.Metadata): Observable<GameState>;
-}
 
-export class GameServiceClientImpl implements GameService {
-  private readonly rpc: Rpc;
-
-  constructor(rpc: Rpc) {
-    this.rpc = rpc;
-    this.StreamGameState = this.StreamGameState.bind(this);
-  }
-
-  StreamGameState(request: DeepPartial<GameStateRequest>, metadata?: grpc.Metadata): Observable<GameState> {
-    return this.rpc.invoke(GameServiceStreamGameStateDesc, GameStateRequest.fromPartial(request), metadata);
-  }
-}
-
-export const GameServiceDesc = { serviceName: "game.GameService" };
-
-export const GameServiceStreamGameStateDesc: UnaryMethodDefinitionish = {
-  methodName: "StreamGameState",
-  service: GameServiceDesc,
-  requestStream: false,
-  responseStream: true,
-  requestType: {
-    serializeBinary() {
-      return GameStateRequest.encode(this).finish();
+export const GameServiceDefinition = {
+  name: "GameService",
+  fullName: "game.GameService",
+  methods: {
+    /** Server-side streaming RPC to send game state updates */
+    streamGameState: {
+      name: "StreamGameState",
+      requestType: GameStateRequest,
+      requestStream: false,
+      responseType: GameState,
+      responseStream: true,
+      options: {},
     },
-  } as any,
-  responseType: {
-    deserializeBinary(data: Uint8Array) {
-      const value = GameState.decode(data);
-      return {
-        ...value,
-        toObject() {
-          return value;
-        },
-      };
-    },
-  } as any,
-};
-
-interface UnaryMethodDefinitionishR extends grpc.UnaryMethodDefinition<any, any> {
-  requestStream: any;
-  responseStream: any;
-}
-
-type UnaryMethodDefinitionish = UnaryMethodDefinitionishR;
-
-interface Rpc {
-  unary<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Promise<any>;
-  invoke<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Observable<any>;
-}
-
-export class GrpcWebImpl {
-  private host: string;
-  private options: {
-    transport?: grpc.TransportFactory;
-    streamingTransport?: grpc.TransportFactory;
-    debug?: boolean;
-    metadata?: grpc.Metadata;
-    upStreamRetryCodes?: number[];
-  };
-
-  constructor(
-    host: string,
-    options: {
-      transport?: grpc.TransportFactory;
-      streamingTransport?: grpc.TransportFactory;
-      debug?: boolean;
-      metadata?: grpc.Metadata;
-      upStreamRetryCodes?: number[];
-    },
-  ) {
-    this.host = host;
-    this.options = options;
-  }
-
-  unary<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    _request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Promise<any> {
-    const request = { ..._request, ...methodDesc.requestType };
-    const maybeCombinedMetadata = metadata && this.options.metadata
-      ? new BrowserHeaders({ ...this.options?.metadata.headersMap, ...metadata?.headersMap })
-      : metadata ?? this.options.metadata;
-    return new Promise((resolve, reject) => {
-      grpc.unary(methodDesc, {
-        request,
-        host: this.host,
-        metadata: maybeCombinedMetadata ?? {},
-        ...(this.options.transport !== undefined ? { transport: this.options.transport } : {}),
-        debug: this.options.debug ?? false,
-        onEnd: function (response) {
-          if (response.status === grpc.Code.OK) {
-            resolve(response.message!.toObject());
-          } else {
-            const err = new GrpcWebError(response.statusMessage, response.status, response.trailers);
-            reject(err);
-          }
-        },
-      });
-    });
-  }
-
-  invoke<T extends UnaryMethodDefinitionish>(
-    methodDesc: T,
-    _request: any,
-    metadata: grpc.Metadata | undefined,
-  ): Observable<any> {
-    const upStreamCodes = this.options.upStreamRetryCodes ?? [];
-    const DEFAULT_TIMEOUT_TIME: number = 3_000;
-    const request = { ..._request, ...methodDesc.requestType };
-    const transport = this.options.streamingTransport ?? this.options.transport;
-    const maybeCombinedMetadata = metadata && this.options.metadata
-      ? new BrowserHeaders({ ...this.options?.metadata.headersMap, ...metadata?.headersMap })
-      : metadata ?? this.options.metadata;
-    return new Observable((observer) => {
-      const upStream = () => {
-        const client = grpc.invoke(methodDesc, {
-          host: this.host,
-          request,
-          ...(transport !== undefined ? { transport } : {}),
-          metadata: maybeCombinedMetadata ?? {},
-          debug: this.options.debug ?? false,
-          onMessage: (next) => observer.next(next),
-          onEnd: (code: grpc.Code, message: string, trailers: grpc.Metadata) => {
-            if (code === 0) {
-              observer.complete();
-            } else if (upStreamCodes.includes(code)) {
-              setTimeout(upStream, DEFAULT_TIMEOUT_TIME);
-            } else {
-              const err = new Error(message) as any;
-              err.code = code;
-              err.metadata = trailers;
-              observer.error(err);
-            }
-          },
-        });
-        observer.add(() => client.close());
-      };
-      upStream();
-    }).pipe(share());
-  }
-}
+  },
+} as const;
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
@@ -553,12 +439,6 @@ export type Exact<P, I extends P> = P extends Builtin ? P
 
 function isSet(value: any): boolean {
   return value !== null && value !== undefined;
-}
-
-export class GrpcWebError extends globalThis.Error {
-  constructor(message: string, public code: grpc.Code, public metadata: grpc.Metadata) {
-    super(message);
-  }
 }
 
 export interface MessageFns<T> {

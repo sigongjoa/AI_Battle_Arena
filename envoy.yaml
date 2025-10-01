@@ -1,18 +1,16 @@
-# envoy.yaml
 static_resources:
   listeners:
   - name: listener_0
     address:
       socket_address:
         address: 0.0.0.0
-        port_value: 8080 # Frontend will connect to this port for gRPC-Web
+        port_value: 8080
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
-          codec_type: AUTO
           route_config:
             name: local_route
             virtual_hosts:
@@ -23,21 +21,33 @@ static_resources:
                   prefix: "/"
                 route:
                   cluster: grpc_backend
-                typed_per_filter_config:
-                  envoy.filters.http.grpc_web: {} # Enable gRPC-Web filter
+              cors:
+                allow_origin_string_match:
+                  - prefix: "*"
+                allow_headers: "content-type,x-grpc-web"
+                allow_methods: "POST,OPTIONS"
+                expose_headers: "grpc-status,grpc-message"
           http_filters:
-          - name: envoy.filters.http.grpc_web # gRPC-Web filter must be before router
+          - name: envoy.filters.http.cors
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+          - name: envoy.filters.http.grpc_web
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
   clusters:
   - name: grpc_backend
-    connect_timeout: 0.25s
+    connect_timeout: 1s
     type: LOGICAL_DNS
-    # Comment out the following line to test on v6.
-    lb_policy: ROUND_ROBIN
+    # gRPC는 HTTP/2를 사용하므로 명시적으로 설정합니다.
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http2_protocol_options: {}
     load_assignment:
       cluster_name: grpc_backend
       endpoints:
@@ -45,5 +55,6 @@ static_resources:
         - endpoint:
             address:
               socket_address:
+                # 백엔드 gRPC 서버 주소
                 address: 127.0.0.1
-                port_value: 50051 # Backend gRPC server port
+                port_value: 50051

@@ -9,11 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@improbable-eng/grpc-web": "^0.15.0",
+    "browser-headers": "^0.4.0",
     "google-protobuf": "^3.14.0",
-    "grpc-web": "^2.0.2",
+    "nice-grpc-common": "^2.0.2",
+    "nice-grpc-web": "^3.3.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "browser-headers": "^0.4.0",
     "rxjs": "^7.0.0"
   },
   "devDependencies": {

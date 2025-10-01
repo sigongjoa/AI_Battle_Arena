@@ -24,19 +24,19 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ngame.proto\x12\x04game\"r\n\x0bPlayerState\x12\x0e\n\x06health\x18\x01 \x01(\x05\x12\x13\n\x0bsuper_gauge\x18\x02 \x01(\x05\x12\x12\n\nposition_x\x18\x03 \x01(\x05\x12\x12\n\nposition_y\x18\x04 \x01(\x05\x12\x16\n\x0e\x63urrent_action\x18\x05 \x01(\t\"\x9a\x01\n\tGameState\x12\x10\n\x08match_id\x18\x01 \x01(\t\x12\r\n\x05timer\x18\x02 \x01(\x05\x12\"\n\x07player1\x18\x03 \x01(\x0b\x32\x11.game.PlayerState\x12\"\n\x07player2\x18\x04 \x01(\x0b\x32\x11.game.PlayerState\x12\x16\n\twinner_id\x18\x05 \x01(\x05H\x00\x88\x01\x01\x42\x0c\n\n_winner_id\"L\n\x10GameStateRequest\x12\x10\n\x08match_id\x18\x01 \x01(\t\x12\x12\n\nplayer1_id\x18\x02 \x01(\x05\x12\x12\n\nplayer2_id\x18\x03 \x01(\x05\x32K\n\x0bGameService\x12<\n\x0fStreamGameState\x12\x16.game.GameStateRequest\x1a\x0f.game.GameState0\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ngame.proto\x12\x04game\"\x86\x01\n\x0bPlayerState\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x11\n\tcharacter\x18\x02 \x01(\t\x12\t\n\x01x\x18\x03 \x01(\x05\x12\t\n\x01y\x18\x04 \x01(\x05\x12\x0e\n\x06\x61\x63tion\x18\x05 \x01(\t\x12\r\n\x05\x66rame\x18\x06 \x01(\x05\x12\x0e\n\x06health\x18\x07 \x01(\x05\x12\x13\n\x0bsuper_gauge\x18\x08 \x01(\x05\"v\n\tGameState\x12\x10\n\x08match_id\x18\x01 \x01(\t\x12\r\n\x05timer\x18\x02 \x01(\x05\x12\"\n\x07players\x18\x03 \x03(\x0b\x32\x11.game.PlayerState\x12\x16\n\twinner_id\x18\x04 \x01(\x05H\x00\x88\x01\x01\x42\x0c\n\n_winner_id\"L\n\x10GameStateRequest\x12\x10\n\x08match_id\x18\x01 \x01(\t\x12\x12\n\nplayer1_id\x18\x02 \x01(\x05\x12\x12\n\nplayer2_id\x18\x03 \x01(\x05\x32K\n\x0bGameService\x12<\n\x0fStreamGameState\x12\x16.game.GameStateRequest\x1a\x0f.game.GameState0\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'game_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_PLAYERSTATE']._serialized_start=20
-  _globals['_PLAYERSTATE']._serialized_end=134
-  _globals['_GAMESTATE']._serialized_start=137
-  _globals['_GAMESTATE']._serialized_end=291
-  _globals['_GAMESTATEREQUEST']._serialized_start=293
-  _globals['_GAMESTATEREQUEST']._serialized_end=369
-  _globals['_GAMESERVICE']._serialized_start=371
-  _globals['_GAMESERVICE']._serialized_end=446
+  _globals['_PLAYERSTATE']._serialized_start=21
+  _globals['_PLAYERSTATE']._serialized_end=155
+  _globals['_GAMESTATE']._serialized_start=157
+  _globals['_GAMESTATE']._serialized_end=275
+  _globals['_GAMESTATEREQUEST']._serialized_start=277
+  _globals['_GAMESTATEREQUEST']._serialized_end=353
+  _globals['_GAMESERVICE']._serialized_start=355
+  _globals['_GAMESERVICE']._serialized_end=430
 # @@protoc_insertion_point(module_scope)

@@ -1,116 +1,118 @@
 import asyncio
 import os
-# from fastapi import WebSocket # Removed
-
 from stable_baselines3 import PPO
 from src.fighting_env import FightingEnv
 from src.constants import FPS
-from ..api.dto import GameStateDTO, PlayerStateDTO # Still needed for internal mapping
-from backend.proto_gen.game_pb2 import GameState, PlayerState # Added for gRPC protobuf messages
+from .. import game_pb2
 
-# Define MODEL_DIR (or import from train_rl_agent if it's a shared constant)
-# For now, define it here for self-containment.
+# Define MODEL_DIR
 MODEL_DIR = "./models/ppo_fighting_env_multi_agent"
 
 class GameRunner:
     """
-    단일 Pygame 게임 인스턴스를 관리하고 실행합니다.
+    Manages and runs a single Pygame game instance, streaming its state via gRPC.
     """
-    def __init__(self, match_id: str, player1_id: int, player2_id: int): # Removed websocket
-        # self.websocket = websocket # Removed
-        self.match_id = match_id # Stored match_id
+    def __init__(self, match_id: str, player1_id: int, player2_id: int):
+        self.match_id = match_id
         self.player1_id = player1_id
         self.player2_id = player2_id
         self._running = False
         self.env = FightingEnv(headless=True)
-        self.env.reset()
+        self.obs = self.env.reset() # Store initial observation
         
-        # Load the trained PPO model
         model_path = os.path.join(MODEL_DIR, "ppo_centralized_final.zip")
-        self.model = PPO.load(model_path, env=self.env)
-        print(f"Loaded PPO model from {model_path}")
+        if os.path.exists(model_path):
+            self.model = PPO.load(model_path, env=self.env)
+            print(f"Loaded PPO model from {model_path}")
+        else:
+            self.model = None
+            print(f"Warning: Model not found at {model_path}. AI will not be used.")
 
-    async def run_grpc_stream(self): # Renamed and adapted for gRPC streaming
+    async def run_grpc_stream(self):
         """
-        게임 루프를 실행하고 GameState protobuf 메시지를 yield합니다.
+        Runs the game loop and yields GameState protobuf messages for streaming.
         """
         self._running = True
-        print(f"Starting real game loop for match {self.match_id} (P1:{self.player1_id} vs P2:{self.player2_id})")
+        print(f"Starting game loop for match {self.match_id} (P1:{self.player1_id} vs P2:{self.player2_id})")
         
-        round_timer = 99
         tick_rate = 1.0 / FPS
 
         while self._running:
             loop_start_time = asyncio.get_event_loop().time()
 
-            # 1. Choose actions using the loaded PPO model
-            obs = self.env.get_obs() # Get current observation
-            actions_array, _states = self.model.predict(obs, deterministic=True)
-            actions = tuple(actions_array[0]) # Unpack for MultiDiscrete (n_envs=1)
+            actions = (0, 0) # Default to no action
+            if self.model:
+                # Use the observation stored from the previous step
+                actions_array, _ = self.model.predict(self.obs, deterministic=True)
+                actions = tuple(actions_array)
 
-            # 2. Step the environment
-            obs, reward, done, info = self.env.step(actions)
+            # Perform a step and get the new observation
+            next_obs, reward, done, info = self.env.step(actions)
+            self.obs = next_obs # Update the observation for the next iteration
 
-            # 3. Get player objects for detailed state
             p1 = self.env.game.player1
             p2 = self.env.game.player2
 
-            # 4. Map to Protobuf GameState
-            p1_state_pb = PlayerState(
+            # Perform a step and get the new observation
+            next_obs, reward, done, info = self.env.step(actions)
+            self.obs = next_obs # Update the observation for the next iteration
+            
+            current_frame = (self.env.game.frame_count // 6) % 4
+
+            p1_state_pb = game_pb2.PlayerState(
+                id=self.player1_id,
+                character="RYU",
+                x=p1.rect.centerx,
+                y=p1.rect.centery,
+                action=p1.state,
+                frame=current_frame,
                 health=p1.health,
-                super_gauge=0, # TODO: Implement super_gauge in Player class
-                position_x=p1.rect.centerx,
-                position_y=p1.rect.centery,
-                current_action=p1.state
+                super_gauge=0, # Placeholder
             )
-            p2_state_pb = PlayerState(
+            p2_state_pb = game_pb2.PlayerState(
+                id=self.player2_id,
+                character="KEN",
+                x=p2.rect.centerx,
+                y=p2.rect.centery,
+                action=p2.state,
+                frame=current_frame,
                 health=p2.health,
-                super_gauge=0, # TODO: Implement super_gauge in Player class
-                position_x=p2.rect.centerx,
-                position_y=p2.rect.centery,
-                current_action=p2.state
-            )
-            game_state_pb = GameState(
-                match_id=self.match_id,
-                timer=round_timer,
-                player1=p1_state_pb,
-                player2=p2_state_pb,
-                winner_id=None # Default to None, set if done
+                super_gauge=0, # Placeholder
             )
 
-            # 5. Check for game over
+            game_state_pb = game_pb2.GameState(
+                match_id=self.match_id,
+                timer=self.env.game.round_timer,
+                players=[p1_state_pb, p2_state_pb]
+            )
+
             if done:
                 self._running = False
+                winner_id = 0 # Draw by default
                 if p1.health <= 0:
-                    game_state_pb.winner_id = self.player2_id
+                    winner_id = self.player2_id
                 elif p2.health <= 0:
-                    game_state_pb.winner_id = self.player1_id
+                    winner_id = self.player1_id
                 else: # Timer ran out
                     if p1.health > p2.health:
-                        game_state_pb.winner_id = self.player1_id
+                        winner_id = self.player1_id
                     elif p2.health > p1.health:
-                        game_state_pb.winner_id = self.player2_id
-                    else:
-                        game_state_pb.winner_id = 0 # Draw
+                        winner_id = self.player2_id
+                
+                game_state_pb.winner_id = winner_id
 
-            # 6. Yield state to gRPC server
             yield game_state_pb
 
             if done:
                 break
 
-            # 7. Maintain FPS
             elapsed_time = asyncio.get_event_loop().time() - loop_start_time
             await asyncio.sleep(max(0, tick_rate - elapsed_time))
-            
-            # This is a simplified timer, a more robust one would use `dt`
-            if round_timer > 0:
-                round_timer -= 1 # Decrement roughly once per second if FPS is ~60
 
-        print("Real game loop finished.")
+        print(f"Game loop for match {self.match_id} finished.")
 
     def stop(self):
         """
-        게임 루프를 중지합니다.
+        Stops the game loop.
         """
         self._running = False

@@ -44,6 +44,9 @@ class Game:
         self.player2: Player = Player(SCREEN_WIDTH - 100 - PLAYER_WIDTH, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, RED, -1)
 
         self.collision_manager: CollisionManager = CollisionManager()
+        self.frame_count: int = 0
+        self.round_timer: int = 99
+        self.timer_accumulator: float = 0.0
         # self.ai_controller: AIController = AIController(self.player2, self.player1) # Disabled for multi-agent control
 
     def reset_game_state(self) -> None:
@@ -108,6 +111,16 @@ class Game:
             dt (float): 마지막 프레임 이후 경과 시간 (델타 타임).
         """
         print(f"[Game._update] Updating players and AI. dt={dt:.4f}")
+        self.frame_count += 1
+
+        # Update timer
+        self.timer_accumulator += dt
+        if self.timer_accumulator >= 1.0:
+            self.round_timer -= 1
+            self.timer_accumulator -= 1.0
+            if self.round_timer < 0:
+                self.round_timer = 0
+                self.running = False # Game over on time out
         self.player1.update(dt, self.player2)
         self.player2.update(dt, self.player1)
 

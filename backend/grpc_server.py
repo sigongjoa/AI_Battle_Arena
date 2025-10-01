@@ -29,7 +29,7 @@ class GameServicer(GameServiceServicer):
         # Create a new GameRunner instance for this match
         # Note: GameRunner currently expects a WebSocket, this needs refactoring.
         # For now, we'll adapt it to yield GameState protobuf messages.
-        game_runner = GameRunner(websocket=None, player1_id=player1_id, player2_id=player2_id)
+        game_runner = GameRunner(match_id=match_id, player1_id=player1_id, player2_id=player2_id)
         self.game_runners[match_id] = game_runner
 
         try:
@@ -58,7 +58,7 @@ class TrainingServicer(TrainingServiceServicer):
         # Create a new TrainingManager instance for this session
         # Note: TrainingManager currently expects a WebSocket, this needs refactoring.
         # For now, we'll adapt it to yield TrainingMetrics protobuf messages.
-        training_manager = TrainingManager(websocket=None, session_id=session_id)
+        training_manager = TrainingManager(session_id=session_id)
         self.training_managers[session_id] = training_manager
 
         try:

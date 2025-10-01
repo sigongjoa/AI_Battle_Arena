@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from backend.proto_gen import training_pb2 as training__pb2
+from . import training_pb2 as training__pb2
 
 GRPC_GENERATED_VERSION = '1.75.1'
 GRPC_VERSION = grpc.__version__
