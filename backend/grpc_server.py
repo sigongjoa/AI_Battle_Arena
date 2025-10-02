@@ -1,92 +1,109 @@
-import grpc
 import asyncio
 from concurrent import futures
-import time
+import os
+import logging
+import grpc
 
-# Import generated gRPC code
-from .game_pb2 import GameState, PlayerState, GameStateRequest
-from .game_pb2_grpc import GameServiceServicer, add_GameServiceServicer_to_server
+os.environ['GRPC_VERBOSITY'] = 'DEBUG'
 
-from .training_pb2 import TrainingMetrics, TrainingMetricsRequest
-from .training_pb2_grpc import TrainingServiceServicer, add_TrainingServiceServicer_to_server
+logging.basicConfig()
+grpc_logger = logging.getLogger('grpc')
+grpc_logger.setLevel(logging.DEBUG)
 
-# Import core logic components
-from backend.core.game_runner import GameRunner
-from backend.core.training_manager import TrainingManager
+from backend.proto_gen import game_pb2, game_pb2_grpc
 
-# --- Game Service Implementation ---
-class GameServicer(GameServiceServicer):
+
+# =========================
+# GameService Implementation
+# =========================
+class GameService(game_pb2_grpc.GameServiceServicer):
     def __init__(self):
-        self.game_runners = {} # Store active GameRunner instances by match_id
+        # 임시 상태 저장소
+        self.players = {
+            "P1": {"x": 100, "y": 500, "health": 100, "status": "idle"},
+            "P2": {"x": 600, "y": 500, "health": 100, "status": "idle"},
+        }
 
-    async def StreamGameState(self, request: GameStateRequest, context):
+    # 클라이언트 → 서버 : 입력 처리 (Unary RPC)
+    async def SendPlayerInput(self, request, context):
+        player_id = request.player_id
+        action = request.action
+        # timestamp = request.timestamp # proto에 timestamp 필드가 없으므로 주석 처리
+
+        print(f"[Input] {player_id} -> {action}")
+
+        # 간단히 액션을 상태에 반영
+        if player_id in self.players:
+            self.players[player_id]["status"] = action
+
+        return game_pb2.Ack(success=True, message=f"Input {action} received")
+
+    # 서버 → 클라이언트 : 게임 상태 스트리밍
+    async def StreamGameState(self, request, context):
         match_id = request.match_id
-        player1_id = request.player1_id
-        player2_id = request.player2_id
+        frame = 0
 
-        print(f"gRPC: StreamGameState requested for match {match_id} (P1:{player1_id} vs P2:{player2_id})")
+        # 무한 스트리밍 (게임 루프 흉내)
+        while True:
+            frame += 1
 
-        # Create a new GameRunner instance for this match
-        # Note: GameRunner currently expects a WebSocket, this needs refactoring.
-        # For now, we'll adapt it to yield GameState protobuf messages.
-        game_runner = GameRunner(match_id=match_id, player1_id=player1_id, player2_id=player2_id)
-        self.game_runners[match_id] = game_runner
+            state = game_pb2.GameState(
+                match_id=match_id,
+                timer=99 - (frame // 60),
+                players=[
+                    game_pb2.PlayerState(
+                        player_id="1",
+                        character="RYU",
+                        x=10 + frame,
+                        y=0,
+                        action="idle",
+                        frame=frame,
+                        health=100,
+                        status="normal",
+                        super_gauge=0
+                    ),
+                    game_pb2.PlayerState(
+                        player_id="2",
+                        character="KEN",
+                        x=200 - frame,
+                        y=0,
+                        action="idle",
+                        frame=frame,
+                        health=100,
+                        status="normal",
+                        super_gauge=0
+                    ),
+                ]
+            )
 
-        try:
-            # Adapt GameRunner to yield protobuf messages
-            async for game_state_pb in game_runner.run_grpc_stream(): # This method needs to be added to GameRunner
-                yield game_state_pb
-        except asyncio.CancelledError:
-            print(f"gRPC: StreamGameState for match {match_id} cancelled.")
-        except Exception as e:
-            print(f"gRPC: Error in StreamGameState for match {match_id}: {e}")
-        finally:
-            if match_id in self.game_runners:
-                del self.game_runners[match_id]
-            game_runner.stop()
-            print(f"gRPC: StreamGameState for match {match_id} finished.")
+            print(f"▶ Sending frame {frame}")  # 디버깅용 로그
+            yield state
+            await asyncio.sleep(0.016)  # ~60 FPS
 
-# --- Training Service Implementation ---
-class TrainingServicer(TrainingServiceServicer):
-    def __init__(self):
-        self.training_managers = {} # Store active TrainingManager instances by session_id
 
-    async def StreamTrainingMetrics(self, request: TrainingMetricsRequest, context):
-        session_id = request.session_id
-        print(f"gRPC: StreamTrainingMetrics requested for session {session_id}")
+# =========================
+# gRPC Server Runner
+# =========================
+async def serve(port: int):
+    server = grpc.aio.server()
+    game_pb2_grpc.add_GameServiceServicer_to_server(GameService(), server)
 
-        # Create a new TrainingManager instance for this session
-        # Note: TrainingManager currently expects a WebSocket, this needs refactoring.
-        # For now, we'll adapt it to yield TrainingMetrics protobuf messages.
-        training_manager = TrainingManager(session_id=session_id)
-        self.training_managers[session_id] = training_manager
-
-        try:
-            # Adapt TrainingManager to yield protobuf messages
-            async for training_metrics_pb in training_manager.run_grpc_stream(): # This method needs to be added to TrainingManager
-                yield training_metrics_pb
-        except asyncio.CancelledError:
-            print(f"gRPC: StreamTrainingMetrics for session {session_id} cancelled.")
-        except Exception as e:
-            print(f"gRPC: Error in StreamTrainingMetrics for session {session_id}: {e}")
-        finally:
-            if session_id in self.training_managers:
-                del self.training_managers[session_id]
-            training_manager.stop_training()
-            print(f"gRPC: StreamTrainingMetrics for session {session_id} finished.")
-
-# --- gRPC Server Startup ---
-async def start_grpc_server(port: int = 50051):
-    server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))
-    add_GameServiceServicer_to_server(GameServicer(), server)
-    add_TrainingServiceServicer_to_server(TrainingServicer(), server)
-    server.add_insecure_port(f'[::]:{port}')
-    print(f"gRPC Server listening on port {port}")
+    listen_addr = f"[::]:{port}"
+    server.add_insecure_port(listen_addr)
+    print(f"🚀 gRPC server started on {listen_addr}")
     await server.start()
     await server.wait_for_termination()
 
-if __name__ == '__main__':
-    # For standalone testing
-    async def main():
-        await start_grpc_server()
-    asyncio.run(main())
+
+async def start_grpc_server(port: int):
+    await serve(port)
+
+async def serve(port: int):
+    server = grpc.aio.server()
+    game_pb2_grpc.add_GameServiceServicer_to_server(GameService(), server)
+
+    listen_addr = f"[::]:{port}"
+    server.add_insecure_port(listen_addr)
+    print(f"🚀 gRPC server started on {listen_addr}")
+    await server.start()
+    await server.wait_for_termination()

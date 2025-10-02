@@ -12,7 +12,7 @@ class GameRunner:
     """
     Manages and runs a single Pygame game instance, streaming its state via gRPC.
     """
-    def __init__(self, match_id: str, player1_id: int, player2_id: int):
+    def __init__(self, match_id: str, player1_id: str, player2_id: str):
         self.match_id = match_id
         self.player1_id = player1_id
         self.player2_id = player2_id
@@ -20,6 +20,10 @@ class GameRunner:
         self.env = FightingEnv(headless=True)
         self.obs = self.env.reset() # Store initial observation
         
+        # Player action states
+        self.player1_moving = 0 # 0 = not moving, -1 = left, 1 = right
+        self.player2_moving = 0
+
         model_path = os.path.join(MODEL_DIR, "ppo_centralized_final.zip")
         if os.path.exists(model_path):
             self.model = PPO.load(model_path, env=self.env)
@@ -27,6 +31,55 @@ class GameRunner:
         else:
             self.model = None
             print(f"Warning: Model not found at {model_path}. AI will not be used.")
+
+    async def handle_player_input(self, player_id: str, key: str, key_action: int):
+        """
+        Handles player input received from the gRPC stream.
+        key_action: 0 for PRESS, 1 for RELEASE
+        """
+        player = None
+        is_player1 = False
+        if player_id == self.player1_id:
+            player = self.env.game.player1
+            is_player1 = True
+        elif player_id == self.player2_id:
+            player = self.env.game.player2
+        else:
+            return # Input is not for any player in this match
+
+        key_press = (key_action == 0) # PRESS
+
+        # --- Player 1 Controls ---
+        if is_player1:
+            if key == 'a':
+                self.player1_moving = -1 if key_press else 0
+            elif key == 'd':
+                self.player1_moving = 1 if key_press else 0
+            elif key == 'w' and key_press:
+                player.jump()
+            elif key == 's':
+                player.is_guarding = key_press
+            elif key == ' ' and key_press: # Space bar for attack
+                player.attack()
+        # --- Player 2 Controls ---
+        else:
+            if key == 'ArrowLeft':
+                self.player2_moving = -1 if key_press else 0
+            elif key == 'ArrowRight':
+                self.player2_moving = 1 if key_press else 0
+            elif key == 'ArrowUp' and key_press:
+                player.jump()
+            elif key == 'ArrowDown':
+                player.is_guarding = key_press
+            elif key == 'Enter' and key_press:
+                player.attack()
+                
+        # Apply movement based on state
+        if is_player1 and self.player1_moving != 0:
+            player.move(self.player1_moving)
+        elif not is_player1 and self.player2_moving != 0:
+            player.move(self.player2_moving)
+
 
     async def run_grpc_stream(self):
         """
@@ -40,22 +93,23 @@ class GameRunner:
         while self._running:
             loop_start_time = asyncio.get_event_loop().time()
 
-            actions = (0, 0) # Default to no action
+            # --- Get AI actions (if model is loaded) ---
+            ai_actions = (0, 0)
             if self.model:
-                # Use the observation stored from the previous step
                 actions_array, _ = self.model.predict(self.obs, deterministic=True)
-                actions = tuple(actions_array)
+                ai_actions = tuple(actions_array)
 
-            # Perform a step and get the new observation
-            next_obs, reward, done, info = self.env.step(actions)
-            self.obs = next_obs # Update the observation for the next iteration
+            # --- Combine AI and Player actions ---
+            # For now, player input directly controls the player in handle_player_input.
+            # The environment step will use the AI actions for now.
+            # A more sophisticated approach would be to merge/override actions.
+            
+            # --- Step the environment ---
+            next_obs, reward, done, info = self.env.step(ai_actions)
+            self.obs = next_obs
 
             p1 = self.env.game.player1
             p2 = self.env.game.player2
-
-            # Perform a step and get the new observation
-            next_obs, reward, done, info = self.env.step(actions)
-            self.obs = next_obs # Update the observation for the next iteration
             
             current_frame = (self.env.game.frame_count // 6) % 4
 
@@ -88,7 +142,7 @@ class GameRunner:
 
             if done:
                 self._running = False
-                winner_id = 0 # Draw by default
+                winner_id = "0" # Draw by default
                 if p1.health <= 0:
                     winner_id = self.player2_id
                 elif p2.health <= 0:

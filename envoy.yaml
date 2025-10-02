@@ -14,34 +14,44 @@ static_resources:
           route_config:
             name: local_route
             virtual_hosts:
-            - name: local_service
+            - name: backend
               domains: ["*"]
               routes:
               - match:
                   prefix: "/"
                 route:
-                  cluster: grpc_backend
+                  cluster: backend
+                  timeout: 0s
               cors:
                 allow_origin_string_match:
-                  - prefix: "*"
-                allow_headers: "content-type,x-grpc-web"
-                allow_methods: "POST,OPTIONS"
+                - prefix: "*"
+                allow_methods: "GET, POST, PUT, DELETE, OPTIONS"
+                allow_headers: "keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,x-accept-content-transfer-encoding,x-accept-response-streaming,x-grpc-web,x-user-agent,grpc-timeout"
                 expose_headers: "grpc-status,grpc-message"
-          http_filters:
-          - name: envoy.filters.http.cors
+                max_age: "1728000"
+                allow_credentials: true
+          access_log:
+          - name: envoy.access_loggers.stdout
             typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+              log_format:
+                text_format: "[%START_TIME%] %REQ(:METHOD)% %REQ(:PATH)% %RESPONSE_CODE% %GRPC_STATUS% %BYTES_RECEIVED% %BYTES_SENT%\n"
+          http_filters:
           - name: envoy.filters.http.grpc_web
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+          - name: envoy.filters.http.cors
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
   clusters:
-  - name: grpc_backend
-    connect_timeout: 1s
+  - name: backend
+    connect_timeout: 0.25s
     type: LOGICAL_DNS
+    lb_policy: ROUND_ROBIN
     # gRPC는 HTTP/2를 사용하므로 명시적으로 설정합니다.
     typed_extension_protocol_options:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -49,7 +59,7 @@ static_resources:
         explicit_http_config:
           http2_protocol_options: {}
     load_assignment:
-      cluster_name: grpc_backend
+      cluster_name: backend
       endpoints:
       - lb_endpoints:
         - endpoint:
@@ -57,4 +67,4 @@ static_resources:
               socket_address:
                 # 백엔드 gRPC 서버 주소
                 address: 127.0.0.1
-                port_value: 50051
+                port_value: 50052

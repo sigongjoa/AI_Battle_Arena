@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 
 from .dto import CharacterDTO, MoveDTO, MatchupRequest, MatchupResponse
-from ..data.game_data import CHARACTERS_FOR_API, MOVES_DATA
+from ..data import game_data
 
 
 router = APIRouter()
@@ -15,16 +15,16 @@ async def get_all_characters():
     """
     등록된 모든 캐릭터의 목록을 조회합니다.
     """
-    return list(CHARACTERS_FOR_API.values())
+    return list(game_data.CHARACTERS_FOR_API.values())
 
 @router.get("/characters/{character_id}/moves", response_model=List[MoveDTO])
 async def get_character_moves(character_id: int):
     """
     특정 캐릭터의 기술 목록을 조회합니다.
     """
-    if character_id not in MOVES_DATA:
+    if character_id not in game_data.MOVES_DATA:
         raise HTTPException(status_code=404, detail="Character not found")
-    return MOVES_DATA[character_id]
+    return game_data.MOVES_DATA[character_id]
 
 @router.post("/analysis", response_model=MatchupResponse)
 async def get_matchup_analysis(request: MatchupRequest):

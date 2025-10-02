@@ -49,7 +49,7 @@ const CharacterSelect: React.FC<CharacterSelectProps> = ({ characters, onSelecti
                   <div className="aspect-square w-full overflow-hidden">
                     <div
                       className="w-full h-full bg-cover bg-center character-image transition-transform duration-300 ease-in-out"
-                      style={{ backgroundImage: `url("${char.image}")` }}
+                      style={{ backgroundImage: `url("${char.thumbnail}")` }}
                     ></div>
                   </div>
                   <div className="mt-3 text-center">

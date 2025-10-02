@@ -2,15 +2,18 @@ syntax = "proto3";
 
 package game;
 
+import "google/protobuf/empty.proto";
+
 message PlayerState {
-  int32 id = 1;
+  string player_id = 1;
   string character = 2; // e.g., "RYU", "KEN"
   int32 x = 3;
   int32 y = 4;
   string action = 5; // e.g., "idle", "punch", "kick"
   int32 frame = 6;
   int32 health = 7;
-  int32 super_gauge = 8;
+  string status = 8;
+  int32 super_gauge = 9;
 }
 
 message GameState {
@@ -30,4 +33,21 @@ message GameStateRequest {
 service GameService {
   // Server-side streaming RPC to send game state updates
   rpc StreamGameState(GameStateRequest) returns (stream GameState);
+}
+
+// New service for player control
+service ControllService {
+    // Client-side streaming RPC: Continuously send player input to the server
+    rpc StreamPlayerInput(stream PlayerInput) returns (google.protobuf.Empty);
+}
+
+message PlayerInput {
+    int32 player_id = 1; // ID of the player being controlled (e.g., 1)
+    enum KeyAction {
+        PRESS = 0;
+        RELEASE = 1;
+    }
+    KeyAction key_action = 2; // Key press or release
+    string key = 3; // The key that was pressed (e.g., "ArrowUp", "a")
+    string match_id = 4; // The ID of the match this input belongs to
 }

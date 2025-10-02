@@ -1,9 +1,13 @@
-import { createChannel, createClient } from "nice-grpc-web";
-import { GameServiceDefinition } from "./game";
-import { TrainingServiceDefinition } from "./training";
+import { createGrpcWebTransport } from "@bufbuild/connect-web";
+import { createPromiseClient } from "@bufbuild/connect";
+import { GameService, ControllService } from "./game_connect";
+import { TrainingService } from "./training_connect";
 
-// The gRPC-web proxy (Envoy) is expected to be running on this address.
-const channel = createChannel("http://localhost:8080");
+const transport = createGrpcWebTransport({
+  baseUrl: "http://localhost:8080", // Envoy endpoint
+  useBinaryFormat: true,
+});
 
-export const gameClient = createClient(GameServiceDefinition, channel);
-export const trainingClient = createClient(TrainingServiceDefinition, channel);
+export const gameClient = createPromiseClient(GameService, transport);
+export const trainingClient = createPromiseClient(TrainingService, transport);
+export const controllClient = createPromiseClient(ControllService, transport);

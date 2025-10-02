@@ -16,6 +16,7 @@ class CharacterDTO(BaseModel):
     image: str
     profileImage: str
     vsImage: str
+    thumbnail: str
     color: str
 
 # 1.2. 게임 상태 (WebSocket용)

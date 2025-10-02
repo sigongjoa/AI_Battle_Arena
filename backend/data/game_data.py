@@ -1,14 +1,10 @@
-# backend/data/game_data.py
-
-# Placeholder for actual game data.
-# In a real application, this would likely come from a database or more complex configuration.
-
 CHARACTERS_DATA = {
     1: {
         "id": 1,
         "name": "Ryu",
         "description": "A wandering martial artist, always seeking to improve his skills.",
-        "image": "/assets/ryu_full.png",
+        "image": "/assets/characters/ryu.png", # Sprite sheet
+        "thumbnail": "/assets/characters/thumbnails/ryu_thumb.png", # Thumbnail
         "profileImage": "/assets/ryu_profile.png",
         "vsImage": "/assets/ryu_vs.png",
         "color": "emphasis-yellow",
@@ -22,7 +18,8 @@ CHARACTERS_DATA = {
         "id": 2,
         "name": "Ken",
         "description": "Ryu's best friend and rival, known for his fiery techniques.",
-        "image": "/assets/ken_full.png",
+        "image": "/assets/characters/ken.png", # Sprite sheet
+        "thumbnail": "/assets/characters/thumbnails/ken_thumb.png", # Thumbnail
         "profileImage": "/assets/ken_profile.png",
         "vsImage": "/assets/ken_vs.png",
         "color": "emphasis-red",
@@ -36,7 +33,8 @@ CHARACTERS_DATA = {
         "id": 3,
         "name": "Chun-Li",
         "description": "An Interpol officer seeking justice.",
-        "image": "/assets/chunli_full.png",
+        "image": "/assets/chunli_full.png", # Placeholder
+        "thumbnail": "/assets/chunli_thumb.png", # Placeholder
         "profileImage": "/assets/chunli_profile.png",
         "vsImage": "/assets/chunli_vs.png",
         "color": "emphasis-blue",
@@ -48,14 +46,14 @@ CHARACTERS_DATA = {
 }
 
 # Extract moves data for separate access
-MOVES_DATA = {
-    char_id: char_data["moves"] for char_id, char_data in CHARACTERS_DATA.items()
-}
+MOVES_DATA = {}
+for char_id, char_data in CHARACTERS_DATA.items():
+    MOVES_DATA[char_id] = char_data["moves"]
 
 # Remove moves from CHARACTERS_DATA for the /characters endpoint
 # as the DTO for CharacterDTO does not include moves directly
 # (moves are fetched via a separate endpoint)
-CHARACTERS_FOR_API = {
-    char_id: {k: v for k, v in char_data.items() if k != "moves"}
-    for char_id, char_data in CHARACTERS_DATA.items()
-}
+CHARACTERS_FOR_API = {}
+for char_id, char_data in CHARACTERS_DATA.items():
+    char_for_api = {k: v for k, v in char_data.items() if k != "moves"}
+    CHARACTERS_FOR_API[char_id] = char_for_api

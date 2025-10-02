@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Character, Screen } from '../types';
 import { Play } from './Icons';
 import { trainingClient } from '../src/grpc/client';
-import { TrainingMetricsRequest } from '../src/grpc/training';
+import { TrainingMetricsRequest } from "../src/grpc/training_pb";
 
 interface TrainingModeProps {
   player1: Character;

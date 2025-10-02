@@ -11,7 +11,7 @@ const VSScreen: React.FC<VSScreenProps> = ({ player1, player2, onNavigate }) => 
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            onNavigate(Screen.HUD);
+            onNavigate(Screen.GameScreen);
         }, 4000);
 
         return () => clearTimeout(timer);
