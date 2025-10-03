@@ -28,6 +28,7 @@
         *   `PeerJS` `Peer` 생성자는 ID와 PeerServer 연결 옵션을 받습니다.
         *   기존 시그널링 서버와의 통합 방안을 고려하여 `PeerJS` 설정을 조정합니다. (예: `host`, `port`, `path`, `key` 등)
         *   `iceServers`는 `PeerJS`의 `config` 옵션을 통해 설정합니다.
+    *   `WebRtcClient` 생성자에서 `this.initPeer()` 호출을 제거합니다.
     *   `setupPeerListeners` 메서드를 `PeerJS` 이벤트(예: `open`, `connection`, `data`, `close`, `error`)를 처리하도록 수정합니다.
     *   `setupSignalingListeners` 메서드를 `PeerJS`의 시그널링 메커니즘과 연동되도록 수정합니다. (기존 시그널링 서버와의 연동 방식 결정 필요)
     *   `send` 메서드를 `PeerJS` 데이터 연결의 `send` 메서드를 사용하도록 수정합니다.

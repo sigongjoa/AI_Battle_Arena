@@ -150,10 +150,11 @@ print(default_api.close_page(pageIdx = 0)) # 첫 번째 페이지 닫기 (마지
     print(default_api.list_console_messages())
     ```
     *   **확인할 로그:**
-        *   `WebRTC: PeerJS instance created` (PeerJS 인스턴스 생성 확인)
-        *   `PeerJS: Peer ID assigned: [ID]` (PeerJS 피어 ID 할당 확인)
-        *   `Signaling: Sending message {type: 'peerjs_signal', ...}` (시그널링 서버로 PeerJS 시그널이 전송되었는지 확인)
-        *   `WebRTC: P2P connection established!` (P2P 연결 성공 확인)
+        *   `WebRTC: WebRtcClient instance created` (WebRtcClient 인스턴스 생성 확인)
+        *   `WebRTC: PeerJS Peer opened with ID: [ID]` (PeerJS 피어 ID 할당 확인)
+        *   `Signaling: Sending message {type: 'send_peer_id', ...}` (시그널링 서버로 PeerJS ID가 전송되었는지 확인)
+        *   `WebRTC: PeerJS DataConnection established!` (P2P 데이터 연결 성공 확인)
+        *   `WebRTC P2P Connected!` (App.tsx에서 WebRTC 클라이언트 연결 이벤트 처리 확인)
 
 2.  **사용자 2 콘솔 로그 확인:**
     *   `select_page`로 사용자 2의 탭(page 1)을 선택합니다.
@@ -165,14 +166,15 @@ print(default_api.close_page(pageIdx = 0)) # 첫 번째 페이지 닫기 (마지
     print(default_api.list_console_messages())
     ```
     *   **확인할 로그:**
-        *   `WebRTC: PeerJS instance created` (PeerJS 인스턴스 생성 확인)
-        *   `PeerJS: Peer ID assigned: [ID]` (PeerJS 피어 ID 할당 확인)
-        *   `Signaling: Received message type 'peerjs_signal', emitting 'peerjs_signal' ...` (사용자 1로부터 PeerJS 시그널을 수신했는지 확인)
-        *   `WebRTC: P2P connection established!` (P2P 연결 성공 확인)
+        *   `WebRTC: WebRtcClient instance created` (WebRtcClient 인스턴스 생성 확인)
+        *   `WebRTC: PeerJS Peer opened with ID: [ID]` (PeerJS 피어 ID 할당 확인)
+        *   `Signaling: Received message type 'peerId', emitting 'peerId' ...` (사용자 1로부터 PeerJS ID를 수신했는지 확인)
+        *   `WebRTC: PeerJS DataConnection established!` (P2P 데이터 연결 성공 확인)
+        *   `WebRTC P2P Connected!` (App.tsx에서 WebRTC 클라이언트 연결 이벤트 처리 확인)
 
 ---
 
 ### 테스트 성공 판단 기준
 
-*   두 클라이언트 모두 `WebRTC: P2P connection established!` 로그를 출력하고, 게임 화면으로 정상적으로 전환되어야 합니다.
+*   두 클라이언트 모두 `WebRTC P2P Connected!` 로그를 출력하고, 게임 화면으로 정상적으로 전환되어야 합니다.
 *   시그널링 서버 로그에 `Relayed peerjs_signal from ... to ...` 메시지가 정상적으로 기록되어야 합니다.

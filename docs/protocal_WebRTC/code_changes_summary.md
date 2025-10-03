@@ -57,15 +57,32 @@
 *   **이유 1:** `PeerJS` 라이브러리 도입.
 
 *   **변경 내용 2:** `PeerJS` 인스턴스 생성 및 설정.
-    *   `new Peer(null, { host: ..., port: ..., path: ..., debug: ..., config: { iceServers: [...] } })` 형태로 인스턴스 생성.
+    *   `new Peer(undefined, { host: ..., port: ..., path: ..., debug: ..., config: { iceServers: [...] } })` 형태로 인스턴스 생성.
 *   **이유 2:** `PeerJS`의 API에 맞춤.
 
-*   **변경 내용 3:** `PeerJS` 이벤트 리스너 설정.
-    *   `peer.on('open')`, `peer.on('connection')`, `connection.on('data')`, `connection.on('close')`, `connection.on('error')` 등 `PeerJS`의 이벤트 모델에 맞게 리스너 설정.
-*   **이유 3:** `PeerJS`의 이벤트 모델에 맞춤.
+*   **변경 내용 3:** `PeerJS` 인스턴스 생성자에서 `this.initPeer();` 호출 제거.
+*   **이유 3:** `initPeer()` 메서드가 존재하지 않아 발생하는 오류 수정.
 
-*   **변경 내용 4:** `WebRtcClient`의 `send` 및 `destroy` 메서드를 `PeerJS` API에 맞게 수정.
-*   **이유 4:** `PeerJS`의 API에 맞춤.
+*   **변경 내용 4:** `PeerJS` 이벤트 리스너 설정.
+    *   `peer.on('open')`, `peer.on('connection')`, `connection.on('data')`, `connection.on('close')`, `connection.on('error')` 등 `PeerJS`의 이벤트 모델에 맞게 리스너 설정.
+*   **이유 4:** `PeerJS`의 이벤트 모델에 맞춤.
+
+*   **변경 내용 5:** `WebRtcClient`의 `send` 및 `destroy` 메서드를 `PeerJS` API에 맞게 수정.
+*   **이유 5:** `PeerJS`의 API에 맞춤.
+
+---
+
+### 5. `arcade-clash/components/GameScreen.tsx`
+
+*   **변경 내용 1:** `webRtcClient.sendData` 호출을 `webRtcClient.send`로 변경.
+*   **이유 1:** `WebRtcClient` 클래스에 `sendData` 메서드가 존재하지 않고 `send` 메서드가 존재하여 발생하는 오류 수정.
+
+*   **변경 내용 2:** `webRtcClient.on('dataChannelMessage', ...)` 이벤트 리스너를 `webRtcClient.on('data', ...)`로 변경.
+*   **이유 2:** `WebRtcClient` 클래스에서 `dataChannelMessage` 대신 `data` 이벤트를 발생시키도록 구현되어 있어 발생하는 오류 수정.
+
+---
+
+### 6. `backend/signaling/server.py`
 
 ---
 

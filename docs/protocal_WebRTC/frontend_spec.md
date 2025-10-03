@@ -19,19 +19,13 @@ WebRTC 클라이언트는 P2P 연결을 설정하고, 데이터 채널을 통해
     *   `localPeerId: string | null`: 로컬 PeerJS 피어 ID. (PeerJS 서버로부터 할당)
 *   **메서드:**
     *   `constructor(signalingClient: SignalingClient, remotePlayerId: string, initiator: boolean)`: 초기화.
-    *   `initPeer(localPeerId?: string)`: `PeerJS` 피어 인스턴스를 생성하고 이벤트 리스너를 설정합니다.
-        *   `peer.on('open')`: 피어 ID가 할당되면 시그널링 서버에 로컬 피어 ID를 등록.
-        *   `peer.on('connection')`: 원격 피어로부터 데이터 연결 요청 수신 시 처리.
-        *   `peer.on('call')`: (미디어 스트림 사용 시) 원격 피어로부터 미디어 호출 수신 시 처리.
-        *   `peer.on('disconnected')`: 피어 연결이 끊어졌을 때 처리.
-        *   `peer.on('error')`: 피어 관련 오류 발생 시 처리.
     *   `connectToPeer(remotePeerId: string)`: 원격 피어에게 데이터 연결을 요청합니다. (initiator 역할)
     *   `setupDataConnectionListeners(conn: DataConnection)`: 데이터 연결(`DataConnection`)에 대한 이벤트 리스너를 설정합니다.
         *   `conn.on('open')`: 데이터 연결이 수립되었을 때 처리.
         *   `conn.on('data')`: 원격 피어로부터 데이터 수신 시 처리.
         *   `conn.on('close')`: 데이터 연결이 종료되었을 때 처리.
         *   `conn.on('error')`: 데이터 연결 오류 발생 시 처리.
-    *   `sendData(data: any)`: 현재 활성화된 데이터 연결을 통해 데이터를 전송합니다.
+    *   `send(data: any)`: 현재 활성화된 데이터 연결을 통해 데이터를 전송합니다.
     *   `closeConnection()`: PeerJS 피어 및 데이터 연결을 종료합니다.
 
 **추가 고려사항:**

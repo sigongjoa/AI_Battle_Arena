@@ -66,6 +66,8 @@ peer.on('error', (err) => {
 #### 기존 코드와의 호환성
 
 *   **대체(Replacement) 관계:** `PeerJS`는 기존 `WebRtcClient.ts`에 구현된 `simple-peer` 기반의 WebRTC 연결 처리 로직을 완전히 대체합니다. 따라서 기존 코드를 **대대적으로 리팩토링**해야 합니다. `WebRtcClient`의 내부 구현을 `PeerJS` 기반으로 다시 작성하게 됩니다.
+*   **`WebRtcClient` 생성자 변경:** `WebRtcClient` 생성자에서 `this.initPeer()` 호출이 제거되었습니다. `PeerJS` 인스턴스 초기화는 생성자 내부에서 직접 처리됩니다.
+*   **`WebRtcClient` 데이터 전송 메서드 변경:** `WebRtcClient`의 데이터 전송 메서드가 `sendData`에서 `send`로 변경되었습니다.
 *   **장점:** 리팩토링 시, WebRTC 연결 설정에 관한 코드가 훨씬 간결하고 명확해져 유지보수가 용이해집니다. 특히 `PeerJS`는 자체 시그널링 서버와의 연동을 염두에 두고 설계되었으므로, 시그널링 로직의 복잡성을 줄일 수 있습니다.
 *   **TypeScript 지원:** `PeerJS`는 TypeScript를 기본적으로 지원합니다. 별도의 `@types` 패키지 설치 없이 바로 사용할 수 있습니다.
 
