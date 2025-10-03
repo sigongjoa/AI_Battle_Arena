@@ -41,7 +41,13 @@ export class WebRtcClient extends SimpleEventEmitter {
     });
 
     this.setupPeerListeners();
-    // this.setupSignalingListeners(); // Commented out for PeerJS initial setup
+
+    this.signalingClient.on('peerId', (message: { senderId: string, peerId: string }) => {
+      if (message.senderId === this.remotePlayerId) {
+        console.log('WebRTC: Received remote PeerJS ID from signaling server:', message.peerId);
+        this.handleRemotePeerId(message.peerId);
+      }
+    }); // Commented out for PeerJS initial setup
     console.log('WebRTC: WebRtcClient instance created', this.remotePlayerId, this.peer); // Added for debugging
   }
 

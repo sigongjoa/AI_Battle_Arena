@@ -135,12 +135,7 @@ const App: React.FC = () => {
         alert('Match request declined.');
       });
 
-      signalingClient.current.on('peerId', (message: { senderId: string, peerId: string }) => {
-        if (webRtcClient.current && message.senderId === remotePlayerId) {
-          console.log('Received remote PeerJS ID from signaling server:', message.peerId);
-          webRtcClient.current.handleRemotePeerId(message.peerId);
-        }
-      });
+
 
       signalingClient.current.on('error', (error) => {
         console.error('Signaling error:', error);
@@ -194,6 +189,7 @@ const App: React.FC = () => {
     if (signalingClient.current && playerId) {
       signalingClient.current.joinLobby(playerName);
       setConnectionStatus('Connecting...');
+      setCurrentScreen(Screen.Lobby); // Explicitly navigate to Lobby screen after joining
       return true;
     }
     return false;

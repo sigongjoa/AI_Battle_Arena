@@ -84,7 +84,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
             }
         };
 
-        webRtcClient.on('dataChannelMessage', handleMessage);
+        webRtcClient.on('data', handleMessage);
         return () => {
             webRtcClient.off('dataChannelMessage', handleMessage);
         };
@@ -114,7 +114,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
 
             // 2. Update engine and send input
             engine.update(localInput);
-            webRtcClient.sendData('game_input', JSON.stringify(localInput));
+            webRtcClient.send(JSON.stringify(localInput));
 
             // 3. Get new state and render
             const newState = engine.getGameState();

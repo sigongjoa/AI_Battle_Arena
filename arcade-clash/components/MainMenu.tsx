@@ -120,7 +120,7 @@ export default function MainMenu(props: MainMenuProps) {
                         {lobbyPlayers.filter(p => p.playerId !== playerId).length > 0 ? (
                             lobbyPlayers.filter(p => p.playerId !== playerId).map(player => (
                                 <li key={player.playerId} className="flex items-center justify-between p-3 bg-primary-bg rounded-md">
-                                    <span className="text-text-light font-semibold">{player.playerName} ({player.status})</span>
+                                    <span className="text-text-light font-semibold">{player.playerName} ({player.status}) - ID: {player.playerId}</span>
                                     <button 
                                         onClick={() => onRequestMatch(player.playerId)}
                                         disabled={player.status !== 'available'}

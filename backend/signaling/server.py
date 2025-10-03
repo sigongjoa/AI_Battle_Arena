@@ -57,11 +57,17 @@ async def handle_join_lobby(player_id, data):
 async def handle_request_match(player_id, data):
     """Handles a player requesting a match with another player."""
     target_id = data.get("targetId")
-    if not target_id or target_id not in PLAYERS:
+    if not target_id:
+        logging.warning(f"handle_request_match: targetId is missing from data for player {player_id}.")
+        await send_to_player(player_id, {"type": "error", "message": "Target player not found."})
+        return
+    if target_id not in PLAYERS:
+        logging.warning(f"handle_request_match: Target player {target_id} not found in PLAYERS for player {player_id}.")
         await send_to_player(player_id, {"type": "error", "message": "Target player not found."})
         return
 
     if PLAYERS[target_id]["status"] != PlayerStatus.AVAILABLE:
+        logging.warning(f"handle_request_match: Target player {target_id} is not available for player {player_id}. Status: {PLAYERS[target_id]['status'].value}")
         await send_to_player(player_id, {"type": "error", "message": "Target player is not available."})
         return
 
@@ -73,6 +79,7 @@ async def handle_request_match(player_id, data):
     }
     
     requester_name = PLAYERS[player_id]["name"]
+    logging.info(f"handle_request_match: Sending match_request_received to {target_id} from {player_id} with session ID {session_id}.")
     await send_to_player(target_id, {
         "type": "match_request_received",
         "requesterId": player_id,
@@ -98,6 +105,7 @@ async def handle_accept_match(player_id, data):
     accepter_name = PLAYERS[player_id]["name"]
     await send_to_player(session["player1Id"], {
         "type": "match_request_accepted",
+        "accepterId": player_id,  # Add this line
         "accepterName": accepter_name,
         "sessionId": session_id,
     })
