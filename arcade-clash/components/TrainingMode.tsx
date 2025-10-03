@@ -1,28 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Character, Screen } from '../types';
 import { Play } from './Icons';
-import { trainingClient } from '../src/grpc/client';
-import { TrainingMetricsRequest } from "../src/grpc/training_pb";
-
-interface TrainingModeProps {
-  player1: Character;
-  player2: Character;
-  onNavigate: (screen: Screen) => void;
-}
-
-interface Metric {
-    value: number;
-    prev: number;
-}
-
-interface TrainingMetricsState {
-    loss: Metric;
-    reward: Metric;
-    q_value: Metric;
-    episode_length: Metric;
-}
-
-const initialMetrics: TrainingMetricsState = {
+const initialMetrics: any = {
     loss: { value: 0, prev: 0 },
     reward: { value: 0, prev: 0 },
     q_value: { value: 0, prev: 0 },
@@ -81,43 +60,7 @@ const formatMetrics = (metrics: TrainingMetricsState): MetricCardProps[] => {
 const TrainingMode: React.FC<TrainingModeProps> = ({ player1, player2, onNavigate }) => {
     const [trainingMetrics, setTrainingMetrics] = useState<TrainingMetricsState>(initialMetrics);
 
-    useEffect(() => {
-        const sessionId = `training_${Date.now()}`;
-        const request = TrainingMetricsRequest.create({
-            sessionId: sessionId,
-        });
 
-        const controller = new AbortController();
-        const stream = trainingClient.streamTrainingMetrics(request, {
-            signal: controller.signal,
-        });
-
-        const consumeStream = async () => {
-            try {
-                for await (const response of stream) {
-                    setTrainingMetrics(prev => ({
-                        loss: { value: response.loss, prev: prev.loss.value },
-                        reward: { value: response.reward, prev: prev.reward.value },
-                        q_value: { value: response.qValue ?? 0, prev: prev.q_value.value },
-                        episode_length: { value: response.episodeLength, prev: prev.episode_length.value },
-                    }));
-                }
-            } catch (error: any) {
-                if (error.code === 'CANCELLED') {
-                    console.log('gRPC stream cancelled gracefully.');
-                } else {
-                    console.error('gRPC stream error:', error);
-                }
-            }
-        };
-
-        consumeStream();
-
-        return () => {
-            console.log('gRPC stream: Unmounting component, cancelling stream.');
-            controller.abort();
-        };
-    }, []);
 
     return (
         <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden p-4 md:p-6 lg:p-8 bg-primary-bg">

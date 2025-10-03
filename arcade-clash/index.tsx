@@ -1,4 +1,25 @@
 
+import { Buffer } from 'buffer';
+
+if (typeof process === 'undefined') {
+  window.process = {
+    env: {},
+    nextTick: (cb: () => void) => {
+      setTimeout(cb, 0);
+    },
+  } as any;
+} else if (typeof process.nextTick === 'undefined') {
+  process.nextTick = (cb: () => void) => {
+    setTimeout(cb, 0);
+  };
+}
+
+if (typeof window.Buffer === 'undefined') {
+  window.Buffer = Buffer;
+}
+
+window.global = window;
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

@@ -12,6 +12,7 @@ export interface PlayerInput {
         right: boolean;
         jump: boolean;
         attack: boolean;
+        guard: boolean;
         // Add other basic inputs as needed for the PoC
     };
     isPrediction?: boolean; // Flag to mark if the input is a prediction

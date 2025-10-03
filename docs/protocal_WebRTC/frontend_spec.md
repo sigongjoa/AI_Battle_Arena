@@ -10,32 +10,33 @@ WebRTC 클라이언트는 P2P 연결을 설정하고, 데이터 채널을 통해
 
 **2.1. `WebRtcClient` 클래스**
 
-*   **목적:** WebRTC `RTCPeerConnection` 및 `RTCDataChannel`을 관리합니다.
+*   **목적:** `PeerJS` 라이브러리를 사용하여 WebRTC P2P 연결 및 `DataConnection`을 관리합니다.
 *   **속성:**
-    *   `peerConnection: RTCPeerConnection`: WebRTC 피어 연결 객체.
+    *   `peer: Peer`: PeerJS 피어 인스턴스.
+    *   `dataConnection: DataConnection | null`: PeerJS 데이터 연결 객체. (연결 수립 후 할당)
     *   `signalingClient: SignalingClient`: 시그널링 서버와의 통신 클라이언트.
-    *   `localPlayerId: string`: 로컬 플레이어 ID.
     *   `remotePlayerId: string`: 원격 플레이어 ID.
-    *   `dataChannels: Map<string, RTCDataChannel>`: 이름으로 데이터 채널을 관리하는 맵.
-    *   `stunServers: string[]`: STUN 서버 URL 목록.
-    *   `turnServers: RTCIceServer[]`: TURN 서버 설정 목록.
+    *   `localPeerId: string | null`: 로컬 PeerJS 피어 ID. (PeerJS 서버로부터 할당)
 *   **메서드:**
-    *   `constructor(localPlayerId: string, signalingClient: SignalingClient, stunServers: string[], turnServers: RTCIceServer[])`: 초기화.
-    *   `initPeerConnection()`: `RTCPeerConnection`을 생성하고 이벤트 리스너를 설정합니다.
-        *   `onicecandidate`: ICE 후보 생성 시 시그널링 서버로 전송.
-        *   `oniceconnectionstatechange`: ICE 연결 상태 변경 처리.
-        *   `ondatachannel`: 원격 피어로부터 데이터 채널 수신 시 처리.
-    *   `createOffer()`: SDP Offer를 생성하고 시그널링 서버로 전송합니다.
-    *   `handleOffer(sdp: string, senderId: string)`: 수신된 SDP Offer를 설정하고 Answer를 생성하여 시그널링 서버로 전송합니다.
-    *   `handleAnswer(sdp: string)`: 수신된 SDP Answer를 설정합니다.
-    *   `addIceCandidate(candidate: RTCIceCandidate)`: 수신된 ICE 후보를 `peerConnection`에 추가합니다.
-    *   `createDataChannel(name: string, options: RTCDataChannelInit)`: 지정된 이름과 옵션으로 `RTCDataChannel`을 생성하고 `dataChannels` 맵에 추가합니다.
-    *   `sendData(channelName: string, data: any)`: 지정된 데이터 채널을 통해 데이터를 전송합니다.
-*   `closeConnection()`: WebRTC 연결을 종료합니다.
+    *   `constructor(signalingClient: SignalingClient, remotePlayerId: string, initiator: boolean)`: 초기화.
+    *   `initPeer(localPeerId?: string)`: `PeerJS` 피어 인스턴스를 생성하고 이벤트 리스너를 설정합니다.
+        *   `peer.on('open')`: 피어 ID가 할당되면 시그널링 서버에 로컬 피어 ID를 등록.
+        *   `peer.on('connection')`: 원격 피어로부터 데이터 연결 요청 수신 시 처리.
+        *   `peer.on('call')`: (미디어 스트림 사용 시) 원격 피어로부터 미디어 호출 수신 시 처리.
+        *   `peer.on('disconnected')`: 피어 연결이 끊어졌을 때 처리.
+        *   `peer.on('error')`: 피어 관련 오류 발생 시 처리.
+    *   `connectToPeer(remotePeerId: string)`: 원격 피어에게 데이터 연결을 요청합니다. (initiator 역할)
+    *   `setupDataConnectionListeners(conn: DataConnection)`: 데이터 연결(`DataConnection`)에 대한 이벤트 리스너를 설정합니다.
+        *   `conn.on('open')`: 데이터 연결이 수립되었을 때 처리.
+        *   `conn.on('data')`: 원격 피어로부터 데이터 수신 시 처리.
+        *   `conn.on('close')`: 데이터 연결이 종료되었을 때 처리.
+        *   `conn.on('error')`: 데이터 연결 오류 발생 시 처리.
+    *   `sendData(data: any)`: 현재 활성화된 데이터 연결을 통해 데이터를 전송합니다.
+    *   `closeConnection()`: PeerJS 피어 및 데이터 연결을 종료합니다.
 
 **추가 고려사항:**
-*   **네트워크 변경 이벤트:** `RTCPeerConnection`의 `iceconnectionstatechange` 리스너에서 네트워크 변경 (Wi-Fi ↔ LTE 전환, 절전 해제 등) 감지 시, 자동 재시도 정책 (재제안/ICE restart)과 사용자에게 “재연결 중…”과 같은 UX 피드백을 제공해야 합니다.
-
+*   **PeerJS 시그널링 서버 연동:** 기존 Python 시그널링 서버와 PeerJS의 시그널링 메커니즘을 어떻게 연동할지 구체적인 방안이 필요합니다. (예: PeerJS의 `peer.on('signal')`과 같은 이벤트를 캡처하여 기존 시그널링 서버를 통해 교환하거나, 별도의 PeerServer 인스턴스를 운영)
+*   **네트워크 변경 이벤트:** `PeerJS`의 `disconnected` 이벤트 등을 활용하여 네트워크 변경 감지 시 재연결 로직 및 사용자 피드백을 제공합니다.
 **2.2. `SignalingClient` 클래스**
 
 *   **목적:** 시그널링 서버와의 WebSocket 통신을 관리합니다.
@@ -185,11 +186,11 @@ WebRTC 클라이언트는 P2P 연결을 설정하고, 데이터 채널을 통해
 *   **WebRTC API:** 브라우저 내장 WebRTC API
     *   **호환성:** 최신 웹 브라우저 (Chrome, Firefox, Edge, Safari)에서 광범위하게 지원됩니다.
     *   **공식 문서:** [MDN WebRTC API](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API)
-*   **WebRTC 헬퍼 라이브러리 (선택 사항):** `simple-peer`
-    *   **목적:** 브라우저의 WebRTC API를 추상화하여 P2P 연결 설정 과정을 간소화합니다.
-    *   **권장 버전:** `~=9.0.0`
+*   **WebRTC 헬퍼 라이브러리 (선택 사항):** `PeerJS`
+    *   **목적:** 브라우저의 WebRTC API를 추상화하여 P2P 연결 설정 과정을 간소화합니다. 자체 시그널링 서버를 포함하며, 복잡한 네트워크 환경에서의 연결을 용이하게 합니다.
+    *   **권장 버전:** `^1.5.4`
     *   **호환성:** TypeScript 환경에서 사용 가능하며, `package.json`에 추가하여 관리합니다.
-    *   **공식 문서:** [https://github.com/feross/simple-peer](https://github.com/feross/simple-peer)
+    *   **공식 문서:** [https://peerjs.com/](https://peerjs.com/)
 
 **4.2. 게임 엔진 및 롤백 넷코드**
 

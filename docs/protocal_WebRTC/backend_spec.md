@@ -22,9 +22,7 @@
 | `request_match` | 특정 플레이어에게 매치 요청 | `{ "requesterId": string, "targetId": string }` |
 | `accept_match` | 매치 요청 수락 | `{ "accepterId": string, "requesterId": string }` |
 | `decline_match` | 매치 요청 거절 | `{ "declinerId": string, "requesterId": string }` |
-| `send_sdp_offer` | WebRTC SDP Offer 전송 | `{ "senderId": string, "receiverId": string, "sdp": string }` |
-| `send_sdp_answer` | WebRTC SDP Answer 전송 | `{ "senderId": string, "receiverId": string, "sdp": string }` |
-| `send_ice_candidate` | WebRTC ICE Candidate 전송 | `{ "senderId": string, "receiverId": string, "candidate": RTCIceCandidate }` |
+| `send_peerjs_signal` | PeerJS 시그널링 데이터 전송 | `{ "senderId": string, "receiverId": string, "signal": any }` |
 | `cancel_match_request` | 매치 요청 취소 | `{ "requesterId": string, "targetId": string, "sessionId": string }` |
 
 **추가 고려사항:**
@@ -39,9 +37,7 @@
 | `match_request_received` | 매치 요청 수신 알림 | `{ "requesterId": string, "requesterName": string, "sessionId": string }` |
 | `match_request_accepted` | 매치 요청 수락 알림 | `{ "accepterId": string, "accepterName": string, "sessionId": string }` |
 | `match_request_declined` | 매치 요청 거절 알림 | `{ "declinerId": string, "declinerName": string, "sessionId": string }` |
-| `sdp_offer_received` | SDP Offer 수신 알림 | `{ "senderId": string, "sdp": string, "sessionId": string }` |
-| `sdp_answer_received` | SDP Answer 수신 알림 | `{ "senderId": string, "sdp": string, "sessionId": string }` |
-| `ice_candidate_received` | ICE Candidate 수신 알림 | `{ "senderId": string, "candidate": RTCIceCandidate, "sessionId": string }` |
+| `peerjs_signal_received` | PeerJS 시그널링 데이터 수신 알림 | `{ "senderId": string, "signal": any, "sessionId": string }` |
 | `match_started` | 매치 시작 알림 (P2P 연결 성공) | `{ "opponentId": string, "opponentName": string, "sessionId": string }` |
 | `error` | 서버 오류 알림 | `{ "code": number, "message": string, "sessionId"?: string }` |
 
@@ -99,22 +95,18 @@
     *   **호환성:** WebRTC 표준을 따르므로 언어/프레임워크에 독립적입니다. 서버 OS (Linux)에 설치됩니다.
     *   **공식 문서:** [https://github.com/coturn/coturn](https://github.com/coturn/coturn)
 
-**1.3.2. Node.js 기반 시그널링 서버 (대안)**
+**1.3.2. PeerJS 연동 고려사항**
 
-*   **언어:** Node.js 16+ (LTS 버전 권장)
-*   **웹소켓 라이브러리:** `ws` 또는 `socket.io`
-    *   **`ws` (경량, 순수 WebSocket):**
-        *   **권장 버전:** `~=8.0.0`
-        *   **호환성:** Node.js 환경에서 고성능 WebSocket 서버 구현에 적합합니다.
-        *   **공식 문서:** [https://github.com/websockets/ws](https://github.com/websockets/ws)
-    *   **`socket.io` (추상화된 WebSocket, 재연결 등 편의 기능 제공):**
-        *   **권장 버전:** `~=4.0.0`
-        *   **호환성:** `ws`보다 높은 수준의 추상화를 제공하며, 자동 재연결, 폴링 대체 등 추가 기능이 필요할 때 유용합니다.
-        *   **공식 문서:** [https://socket.io/docs/v4/](https://socket.io/docs/v4/)
-*   **인증/권한:** `jsonwebtoken` (JWT 토큰 생성 및 검증)
-    *   **권장 버전:** `~=9.0.0`
-    *   **공식 문서:** [https://github.com/auth0/node-jsonwebtoken](https://github.com/auth0/node-jsonwebtoken)
-*   **STUN/TURN 서버:** `coturn` (Python 기반과 동일)
+프론트엔드에서 WebRTC 라이브러리가 `PeerJS`로 변경됨에 따라, 백엔드 시그널링 서버는 `PeerJS`의 시그널링 프로토콜과 연동되어야 합니다. 이는 다음 두 가지 주요 접근 방식으로 구현될 수 있습니다.
+
+*   **PeerJS PeerServer 사용:**
+    *   별도의 `PeerJS` PeerServer 인스턴스를 운영하고, 기존 Python 시그널링 서버는 플레이어 ID 교환 및 매치메이킹 역할만 수행합니다.
+    *   `PeerJS` 클라이언트는 PeerServer에 직접 연결하여 SDP/ICE 교환을 처리합니다.
+    *   이 경우, Python 시그널링 서버는 `PeerJS` 클라이언트로부터 Peer ID를 받아 다른 클라이언트에게 전달하는 역할만 하면 됩니다.
+*   **커스텀 시그널링을 통한 PeerJS 연동:**
+    *   `PeerJS` 클라이언트를 커스텀 시그널링 서버(현재 Python 시그널링 서버)와 연동하도록 구성합니다.
+    *   Python 시그널링 서버는 `PeerJS` 클라이언트가 생성하는 시그널링 메시지(SDP, ICE 등)를 중계하는 역할을 합니다.
+    *   이 접근 방식은 `PeerJS`의 시그널링 메시지 형식을 이해하고, 이를 Python 서버에서 파싱하고 중계하는 로직을 구현해야 합니다.
 
 **1.3.3. 데이터 직렬화/역직렬화 (선택 사항)**
 
@@ -126,5 +118,3 @@
 *   **Node.js:** `msgpack-lite`
     *   **권장 버전:** `~=0.1.0`
     *   **공식 문서:** [https://github.com/kawanet/msgpack-lite](https://github.com/kawanet/msgpack-lite)
-
----

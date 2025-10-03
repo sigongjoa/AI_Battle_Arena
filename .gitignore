@@ -18,3 +18,11 @@ logs/
 save/
 pose_output.json
 *.log
+
+# Node.js dependencies and build artifacts
+node_modules/
+arcade-clash@0.0.0
+arcade-clash@0.0.0/
+vite
+vite/
+package.json

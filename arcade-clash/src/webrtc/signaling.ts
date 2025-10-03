@@ -12,11 +12,6 @@ function toCamelCase(s: string): string {
 
 interface SignalingMessage {
   type: string;
-  playerId?: string;
-  targetId?: string;
-  senderId?: string;
-  sdp?: RTCSessionDescriptionInit;
-  iceCandidate?: RTCIceCandidateInit;
   [key: string]: any;
 }
 
@@ -31,6 +26,7 @@ export class SignalingClient extends SimpleEventEmitter {
   }
 
   public connect(playerId: string): Promise<void> {
+    console.log('Signaling: Attempting to connect...', playerId); // Added for debugging
     return new Promise((resolve, reject) => {
       if (this.ws) {
         console.warn("Signaling: Already connected or connecting.");
@@ -42,12 +38,14 @@ export class SignalingClient extends SimpleEventEmitter {
       this.ws.onopen = () => {
         console.log(`Signaling: Connected to ${this.signalingServerUrl}`);
         this.sendRegistration();
-        // The 'registered' event from the server will complete the connection process
       };
 
       this.ws.onmessage = (event) => {
         const message: SignalingMessage = JSON.parse(event.data);
-        const eventType = toCamelCase(message.type);
+        let eventType = message.type;
+        if (message.type !== 'peerId') {
+            eventType = toCamelCase(message.type);
+        }
         console.log(`Signaling: Received message type '${message.type}', emitting '${eventType}'`, message);
         this.emit(eventType, message);
 
@@ -71,53 +69,38 @@ export class SignalingClient extends SimpleEventEmitter {
     });
   }
 
-  private sendRegistration() {
-    if (this.ws && this.playerId) {
-      this.send({ type: 'register', playerId: this.playerId });
-    }
-  }
-
-  public send(message: SignalingMessage) {
+  private send(message: SignalingMessage) {
+    console.log('Signaling: Sending message', message); // Added for debugging
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     } else {
       console.warn('Signaling: WebSocket not open. Message not sent:', message);
     }
   }
+  
+  private sendRegistration() {
+    if (this.ws && this.playerId) {
+      this.send({ type: 'register', playerId: this.playerId });
+    }
+  }
 
   // --- Lobby and Matchmaking Methods ---
+  public joinLobby(playerName: string) { this.send({ type: 'join_lobby', playerName }); }
+  public requestMatch(targetId: string) { this.send({ type: 'request_match', targetId }); }
+  public acceptMatch(sessionId: string) { this.send({ type: 'accept_match', sessionId }); }
+  public declineMatch(sessionId: string) { this.send({ type: 'decline_match', sessionId }); }
 
-  public joinLobby(playerName: string) {
-    this.send({ type: 'join_lobby', playerName });
+  // --- Generic WebRTC Signaling Method for PeerJS ---
+  public sendPeerId(targetId: string, peerId: string) {
+    this.send({ type: 'send_peer_id', targetId, peerId });
   }
 
-  public requestMatch(targetId: string) {
-    this.send({ type: 'request_match', targetId });
-  }
-
-  public acceptMatch(sessionId: string) {
-    this.send({ type: 'accept_match', sessionId });
-  }
-
-  public declineMatch(sessionId: string) {
-    this.send({ type: 'decline_match', sessionId });
-  }
-
-  // --- WebRTC Signaling Methods ---
-
-  public sendSdpOffer(targetId: string, sdp: RTCSessionDescriptionInit) {
-    this.send({ type: 'sdp_offer', targetId, sdp });
-  }
-
-  public sendSdpAnswer(targetId: string, sdp: RTCSessionDescriptionInit) {
-    this.send({ type: 'sdp_answer', targetId, sdp });
-  }
-
-  public sendIceCandidate(targetId: string, iceCandidate: RTCIceCandidateInit) {
-    this.send({ type: 'ice_candidate', targetId, iceCandidate });
+  public sendPeerJSSignal(targetId: string, signalData: any) {
+    this.send({ type: 'peerjs_signal', targetId, signal: signalData });
   }
 
   public disconnect() {
+    console.log('Signaling: Disconnect method called.'); // Added for debugging
     if (this.ws) {
       this.ws.close();
     }

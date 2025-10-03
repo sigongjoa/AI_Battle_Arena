@@ -12,6 +12,10 @@ export interface CharacterState {
     velocity: { x: FixedPoint; y: FixedPoint; };
     health: FixedPoint;
     isGrounded: boolean;
+    action: 'idle' | 'moving' | 'attacking' | 'guarding' | 'hitstun';
+    actionFrame: number;
+    hitbox: { active: boolean, x: FixedPoint, y: FixedPoint, width: FixedPoint, height: FixedPoint } | null;
+    hurtbox: { x: FixedPoint, y: FixedPoint, width: FixedPoint, height: FixedPoint };
     // Add other deterministic character properties as needed for the PoC
 }
 

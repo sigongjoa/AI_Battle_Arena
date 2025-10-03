@@ -1,29 +1,30 @@
 import React, { useState } from 'react';
 import { Screen } from '../types';
 
-// --- Type Definitions ---
-interface Player {
-    playerId: string;
-    playerName: string;
-    status: 'available' | 'in_match';
-}
+// --- Type Definitions (Moved to App.tsx or global types) ---
+// interface Player {
+//     playerId: string;
+//     playerName: string;
+//     status: 'available' | 'in_match';
+// }
 
-interface MatchRequest {
-    requesterId: string;
-    requesterName: string;
-    sessionId: string;
-}
+// interface MatchRequest {
+//     requesterId: string;
+//     requesterName: string;
+//     sessionId: string;
+// }
 
 interface MainMenuProps {
   onNavigate: (screen: Screen) => void;
   playerId: string;
-  lobbyPlayers: Player[];
-  matchRequest: MatchRequest | null;
+  lobbyPlayers: any[]; // Use 'any' or define a global Player type
+  matchRequest: any | null; // Use 'any' or define a global MatchRequest type
   connectionStatus: string;
   onJoinLobby: (playerName: string) => Promise<boolean>;
   onRequestMatch: (targetId: string) => void;
   onAcceptMatch: () => void;
   onDeclineMatch: () => void;
+  currentSubScreen: 'main' | 'lobby'; // Added prop
 }
 
 // --- Helper Components ---
@@ -59,7 +60,7 @@ const InputField: React.FC<{value: string, onChange: (e: React.ChangeEvent<HTMLI
 
 // --- MainMenu Component ---
 
-const MainMenu: React.FC<MainMenuProps> = (props) => {
+export default function MainMenu(props: MainMenuProps) {
     const {
         onNavigate,
         playerId,
@@ -69,16 +70,17 @@ const MainMenu: React.FC<MainMenuProps> = (props) => {
         onJoinLobby,
         onRequestMatch,
         onAcceptMatch,
-        onDeclineMatch
+        onDeclineMatch,
+        currentSubScreen
     } = props;
 
-    const [uiScreen, setUiScreen] = useState<'main' | 'lobby'>('main');
-    const [playerName, setPlayerName] = useState('');
+    const [playerName, setPlayerName] = useState(''); // Keep local for input field
 
     const handleJoinLobbyClick = async () => {
         const success = await onJoinLobby(playerName);
         if (success) {
             // UI will be updated by connectionStatus prop
+            // No need to set uiScreen here, App.tsx handles navigation
         }
     };
 
@@ -89,7 +91,7 @@ const MainMenu: React.FC<MainMenuProps> = (props) => {
             </h1>
             <p className="text-text-gray mb-12">The Ultimate Fighting Experience</p>
             <nav className="flex flex-col items-center space-y-4">
-                <PrimaryButton onClick={() => setUiScreen('lobby')}>
+                <PrimaryButton onClick={() => onNavigate(Screen.Lobby)}>
                     Online Lobby
                 </PrimaryButton>
                 <SecondaryButton onClick={() => onNavigate(Screen.CharacterSelect)}>
@@ -106,6 +108,7 @@ const MainMenu: React.FC<MainMenuProps> = (props) => {
     );
 
     const renderLobby = () => (
+        
         <div className="w-full max-w-md">
             <h2 className="text-4xl font-bold text-text-light mb-6">Online Lobby</h2>
             <p className="text-text-gray mb-4">Status: {connectionStatus}</p>
@@ -144,7 +147,7 @@ const MainMenu: React.FC<MainMenuProps> = (props) => {
                     </PrimaryButton>
                 </div>
             )}
-             <button onClick={() => setUiScreen('main')} className="mt-6 text-highlight-yellow">
+             <button onClick={() => onNavigate(Screen.MainMenu)} className="mt-6 text-highlight-yellow">
                 &larr; Back to Main Menu
             </button>
         </div>
@@ -154,7 +157,7 @@ const MainMenu: React.FC<MainMenuProps> = (props) => {
         <div className="relative min-h-screen w-full flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-primary-bg/80 backdrop-blur-sm"></div>
             <main className="relative z-10 w-full max-w-sm text-center">
-                {uiScreen === 'main' ? renderMainMenu() : renderLobby()}
+                {currentSubScreen === 'main' ? renderMainMenu() : renderLobby()}
             </main>
 
             {/* Match Request Modal */}
@@ -178,6 +181,4 @@ const MainMenu: React.FC<MainMenuProps> = (props) => {
             )}
         </div>
     );
-};
-
-export default MainMenu;
+}

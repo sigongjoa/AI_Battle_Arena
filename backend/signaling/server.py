@@ -1,10 +1,9 @@
-# backend/signaling/server.py
-
 import asyncio
 import json
 import websockets
 import logging
 import uuid
+import traceback
 from enum import Enum
 
 logging.basicConfig(level=logging.INFO)
@@ -99,7 +98,6 @@ async def handle_accept_match(player_id, data):
     accepter_name = PLAYERS[player_id]["name"]
     await send_to_player(session["player1Id"], {
         "type": "match_request_accepted",
-        "accepterId": player_id,
         "accepterName": accepter_name,
         "sessionId": session_id,
     })
@@ -126,12 +124,23 @@ async def handle_decline_match(player_id, data):
     decliner_name = PLAYERS[player_id]["name"]
     await send_to_player(session["player1Id"], {
         "type": "match_request_declined",
-        "declinerId": player_id,
         "declinerName": decliner_name,
         "sessionId": session_id,
     })
     logging.info(f"Match {session_id} declined by {player_id}.")
     del MATCH_SESSIONS[session_id]
+
+async def handle_send_peer_id(player_id, data):
+    """Relays PeerJS ID to the target player."""
+    target_id = data.get("targetId")
+    peer_id = data.get("peerId")
+    if not target_id or not peer_id or target_id not in PLAYERS:
+        logging.warning(f"Relay PeerJS ID failed: Target {target_id} not found or peerId missing.")
+        return
+
+    await send_to_player(target_id, {"type": "peerId", "senderId": player_id, "peerId": peer_id})
+    logging.info(f"Relayed PeerJS ID {peer_id} from {player_id} to {target_id}")
+
 
 async def relay_webrtc_message(player_id, data):
     """Relays WebRTC signaling messages (SDP, ICE) to the target player."""
@@ -176,9 +185,9 @@ async def handler(websocket):
                 await handle_accept_match(player_id, data)
             elif message_type == "decline_match":
                 await handle_decline_match(player_id, data)
-            elif message_type in ["sdp_offer", "sdp_answer", "ice_candidate"]:
-                # The frontend spec uses send_sdp_offer, but let's be more flexible
-                data["type"] = data["type"].replace("send_", "") # Normalize to sdp_offer
+            elif message_type == "send_peer_id": # New handler for PeerJS ID exchange
+                await handle_send_peer_id(player_id, data)
+            elif message_type == "signal":
                 await relay_webrtc_message(player_id, data)
             else:
                 logging.warning(f"Unknown message type: {message_type} from {player_id}")
@@ -189,6 +198,8 @@ async def handler(websocket):
         logging.error(f"Error for player {player_id}: {e}", exc_info=True)
     finally:
         if player_id and player_id in PLAYERS:
+            logging.info(f"Player {player_id} unregistered and sessions cleaned. Stack trace:")
+            traceback.print_stack()
             del PLAYERS[player_id]
             # Clean up any stale match requests
             stale_sessions = [
@@ -197,7 +208,6 @@ async def handler(websocket):
             ]
             for sid in stale_sessions:
                 del MATCH_SESSIONS[sid]
-            logging.info(f"Player {player_id} unregistered and sessions cleaned.")
             await broadcast_lobby_update()
 
 async def main():

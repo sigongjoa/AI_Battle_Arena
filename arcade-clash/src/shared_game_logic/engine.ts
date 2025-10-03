@@ -251,26 +251,84 @@ export class GameEngine {
         this.simulateCharacter(this._gameState.player1, inputs[this._gameState.player1.id], this._fixedDeltaTime);
         this.simulateCharacter(this._gameState.player2, inputs[this._gameState.player2.id], this._fixedDeltaTime);
 
+        this.handleCollisions();
+
         this._gameState.randomSeed = (this._gameState.randomSeed * 9301 + 49297) % 233280;
     }
 
     private simulateCharacter(character: CharacterState, input: PlayerInput, dt: FixedPoint): void {
         if (!input) return; // Do nothing if input is missing for a frame
 
-        const gravity = FixedPoint.fromFloat(0.1);
-        character.velocity.y = character.velocity.y.subtract(gravity.multiply(dt));
+        // 1. Determine character action state from input
+        let newAction = character.action;
+        const canStartAction = character.action === 'idle' || character.action === 'moving';
 
-        const moveSpeed = FixedPoint.fromFloat(2);
-        if (input.inputs.left) {
-            character.velocity.x = character.velocity.x.subtract(moveSpeed.multiply(dt));
-        } else if (input.inputs.right) {
-            character.velocity.x = character.velocity.x.add(moveSpeed.multiply(dt));
-        } else {
-            character.velocity.x = character.velocity.x.multiply(FixedPoint.fromFloat(0.9));
-            if (Math.abs(character.velocity.x.toFloat()) < 0.1) {
-                character.velocity.x = FixedPoint.fromFloat(0);
+        if (canStartAction) {
+            if (input.inputs.attack) {
+                newAction = 'attacking';
+            } else if (input.inputs.guard) {
+                newAction = 'guarding';
+            } else if (input.inputs.left || input.inputs.right) {
+                newAction = 'moving';
+            } else {
+                newAction = 'idle';
             }
         }
+
+        // Reset actionFrame if the action has changed
+        if (newAction !== character.action) {
+            character.action = newAction;
+            character.actionFrame = 0;
+        } else {
+            character.actionFrame++;
+        }
+
+        // 2. Update state based on action
+        character.hitbox = null; // Reset hitbox each frame
+
+        switch (character.action) {
+            case 'attacking':
+                // Simple attack: active for a few frames, then return to idle
+                if (character.actionFrame >= 2 && character.actionFrame <= 4) {
+                    character.hitbox = { active: true, x: FixedPoint.fromFloat(0.6), y: FixedPoint.fromFloat(0.5), width: FixedPoint.fromFloat(0.8), height: FixedPoint.fromFloat(0.3) };
+                }
+                if (character.actionFrame > 5) {
+                    character.action = 'idle';
+                }
+                break;
+
+            case 'hitstun':
+                // Can't do anything while in hitstun
+                if (character.actionFrame > 7) { // Stun for 7 frames
+                    character.action = 'idle';
+                }
+                break;
+
+            case 'guarding':
+                // Stop horizontal movement instantly when guarding
+                character.velocity.x = FixedPoint.fromFloat(0);
+                break;
+
+            case 'moving':
+            case 'idle':
+                const moveSpeed = FixedPoint.fromFloat(2);
+                if (input.inputs.left) {
+                    character.velocity.x = character.velocity.x.subtract(moveSpeed.multiply(dt));
+                } else if (input.inputs.right) {
+                    character.velocity.x = character.velocity.x.add(moveSpeed.multiply(dt));
+                } else {
+                    // Simple friction
+                    character.velocity.x = character.velocity.x.multiply(FixedPoint.fromFloat(0.9));
+                    if (Math.abs(character.velocity.x.toFloat()) < 0.1) {
+                        character.velocity.x = FixedPoint.fromFloat(0);
+                    }
+                }
+                break;
+        }
+
+        // 3. Apply physics
+        const gravity = FixedPoint.fromFloat(0.1);
+        character.velocity.y = character.velocity.y.subtract(gravity.multiply(dt));
 
         character.position.x = character.position.x.add(character.velocity.x.multiply(dt));
         character.position.y = character.position.y.add(character.velocity.y.multiply(dt));
@@ -281,9 +339,51 @@ export class GameEngine {
             character.velocity.y = FixedPoint.fromFloat(0);
             character.isGrounded = true;
         }
+    }
 
-        if (input.inputs.attack) {
-            // Attack logic would go here
+    private doBoxesOverlap(p1: CharacterState, p2: CharacterState): boolean {
+        if (!p1.hitbox || !p1.hitbox.active) return false;
+
+        const p1Hitbox = {
+            left: p1.position.x.add(p1.hitbox.x),
+            right: p1.position.x.add(p1.hitbox.x).add(p1.hitbox.width),
+            top: p1.position.y.add(p1.hitbox.y),
+            bottom: p1.position.y.add(p1.hitbox.y).subtract(p1.hitbox.height),
+        };
+
+        const p2Hurtbox = {
+            left: p2.position.x.add(p2.hurtbox.x),
+            right: p2.position.x.add(p2.hurtbox.x).add(p2.hurtbox.width),
+            top: p2.position.y.add(p2.hurtbox.y),
+            bottom: p2.position.y.add(p2.hurtbox.y).subtract(p2.hurtbox.height),
+        };
+
+        // AABB collision detection
+        return p1Hitbox.left.lessThan(p2Hurtbox.right) &&
+               p1Hitbox.right.greaterThan(p2Hurtbox.left) &&
+               p1Hitbox.bottom.lessThan(p2Hurtbox.top) &&
+               p1Hitbox.top.greaterThan(p2Hurtbox.bottom);
+    }
+
+    private handleCollisions(): void {
+        const { player1, player2 } = this._gameState;
+
+        // Check P1 hitting P2
+        if (this.doBoxesOverlap(player1, player2)) {
+            if (player2.action !== 'guarding') {
+                player2.action = 'hitstun';
+                player2.actionFrame = 0;
+                player2.health = player2.health.subtract(FixedPoint.fromInt(10));
+            }
+        }
+
+        // Check P2 hitting P1
+        if (this.doBoxesOverlap(player2, player1)) {
+            if (player1.action !== 'guarding') {
+                player1.action = 'hitstun';
+                player1.actionFrame = 0;
+                player1.health = player1.health.subtract(FixedPoint.fromInt(10));
+            }
         }
     }
 

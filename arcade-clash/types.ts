@@ -1,6 +1,7 @@
 
 export enum Screen {
     MainMenu,
+    Lobby, // Added for the online lobby screen
     CharacterSelect,
     VSScreen,
     HUD,
