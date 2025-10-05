@@ -51,6 +51,12 @@ export class WebRtcClient extends SimpleEventEmitter {
     console.log('WebRTC: WebRtcClient instance created', this.remotePlayerId, this.peer); // Added for debugging
   }
 
+  public async start(): Promise<void> {
+    console.log('WebRTC: Starting WebRtcClient connection process.');
+    await this.signalingClient.connect(this.localPlayerId);
+    this.setupSignalingListeners(); // Ensure signaling listeners are set up after connection
+  }
+
   private setupPeerListeners() {
     this.peer.on('open', (id) => {
       console.log('WebRTC: PeerJS Peer opened with ID:', id);

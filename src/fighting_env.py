@@ -18,8 +18,9 @@ class FightingEnv(gym.Env):
     """
     metadata = {"render_modes": ["human"], "render_fps": 60}
 
-    def __init__(self, backend_peer_id: str, render_mode=None):
+    def __init__(self, backend_peer_id: str, render_mode=None, test_mode: bool = False):
         super().__init__()
+        self.test_mode = test_mode
 
         # Define action and observation spaces based on the spec
         # Action: 0:Idle, 1:MoveFwd, 2:MoveBwd, 3:Jump, 4:Attack1, 5:Attack2
@@ -34,7 +35,7 @@ class FightingEnv(gym.Env):
         self.action_queue = queue.Queue()
         self.result_queue = queue.Queue()
 
-        self.webrtc_client = WebRTCClient(self.action_queue, self.result_queue)
+        self.webrtc_client = WebRTCClient(self.action_queue, self.result_queue, test_mode=self.test_mode)
         
         # Run the WebRTC client in a separate thread
         self.webrtc_thread = threading.Thread(

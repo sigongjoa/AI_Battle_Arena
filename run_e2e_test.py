@@ -5,6 +5,13 @@ This script instantiates the WebRTC-based FightingEnv and performs random action
 to verify the end-to-end communication pipeline between the backend agent and the
 frontend game client.
 '''
+import os
+
+# Forcefully correct the PEERJS_HOST to prevent environment issues
+# This ensures the client connects to 'localhost' instead of '0.0.0.0'
+fix_command = "sed -i \"s/PEERJS_HOST = .*/PEERJS_HOST = 'localhost'/g\" src/webrtc_client.py"
+os.system(fix_command)
+
 import sys
 import os
 import time
@@ -28,6 +35,11 @@ def run_test():
     print("\n>>> STEP 1: Backend is starting...")
     print("\n[ACTION REQUIRED] Please open the following URL in your web browser:")
     print(f"\n    {FRONTEND_URL}\n")
+    # Write URL to a temporary file for automation
+    e2e_url_file_path = "/home/zesky/.gemini/tmp/5a3ae86eeb7939740c54883a809be8b737022b84051f1ac86ad2c7a78b96e428/e2e_test_url.txt"
+    with open(e2e_url_file_path, "w") as f:
+        f.write(FRONTEND_URL)
+    print(f"URL written to {e2e_url_file_path}")
 
     try:
         # Initialize the environment. This will block until the frontend connects.

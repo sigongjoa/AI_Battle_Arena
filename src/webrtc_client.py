@@ -1,130 +1,140 @@
-import os
+'''
+This module provides a WebRTC client for Python using aiortc.
+It connects to the custom FastAPI WebSocket signaling server to exchange
+SDP and ICE candidates with a browser client.
+'''
 import asyncio
+import numpy as np
 import json
 import logging
 import queue
-import threading
+import aiohttp
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCDataChannel
 
-from peerpy.peer import Peer
-from peerpy.connection import Connection
-
-# Basic logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Constants for PeerJS Server
-PEERJS_HOST = os.getenv('PEERJS_HOST', '127.0.0.1')
-PEERJS_PORT = 9000
-PEERJS_PATH = '/myapp'
+SIGNALING_URL = "ws://localhost:8001/ws/"
 
 class WebRTCClient:
-    """
-    Manages the WebRTC connection using the peerpy library.
-    """
-
-    def __init__(self, action_queue: queue.Queue, result_queue: queue.Queue):
+    def __init__(self, action_queue: queue.Queue, result_queue: queue.Queue, test_mode: bool = False):
+        self.test_mode = test_mode
         self.action_queue = action_queue
         self.result_queue = result_queue
         self.loop = None
-        self.peer: Peer | None = None
-        self.data_channel: Connection | None = None
+        self.pc = RTCPeerConnection()
+        self.data_channel: RTCDataChannel | None = None
+        self.backend_peer_id = None
+        self.frontend_peer_id = None
 
-    def run(self, backend_peer_id: str):
-        """
-        Entry point for the thread. Sets up and runs the asyncio event loop.
-        """
-        self.loop = asyncio.new_event_loop()
+    def run(self, peer_id: str, signaling_server_url: str = "ws://localhost:8001/ws"):
+        self.peer_id = peer_id
+        if self.test_mode:
+            logger.info(f"WebRTCClient running in test mode for peer_id: {peer_id}. Simulating connection_ready.")
+            self.result_queue.put({"type": "connection_ready"})
+            
+            # Loop to simulate responses for reset and step
+            while True:
+                try:
+                    # Use a short timeout to allow the thread to be interrupted or for tests to finish
+                    message = self.action_queue.get(timeout=0.1) 
+                    if message["type"] == "reset":
+                        logger.info("Test mode: Received reset, sending dummy reset_result.")
+                        dummy_obs = np.zeros(8, dtype=np.float32) # Assuming 8-dim observation space
+                        self.result_queue.put({"type": "reset_result", "observation": dummy_obs.tolist()})
+                    elif message["type"] == "action":
+                        logger.info(f"Test mode: Received action {message['action']}, sending dummy step_result.")
+                        dummy_obs = np.zeros(8, dtype=np.float32)
+                        dummy_reward = 0.0
+                        dummy_done = False
+                        self.result_queue.put({
+                            "type": "step_result",
+                            "observation": dummy_obs.tolist(),
+                            "reward": dummy_reward,
+                            "done": dummy_done
+                        })
+                    # Add other message types if necessary
+                except queue.Empty:
+                    # No message, continue loop. This allows the thread to be responsive to shutdown.
+                    pass
+                except Exception as e:
+                    logger.error(f"Test mode: Error processing action_queue: {e}")
+                    break # Exit loop on error
+            return # Exit run method when loop breaks
+
+        self.loop = asyncio.new_event_loop() # Create event loop in this thread
         asyncio.set_event_loop(self.loop)
-        try:
-            self.loop.run_until_complete(self.connect(backend_peer_id))
-        except KeyboardInterrupt:
-            pass
-        finally:
-            logger.info("Shutting down WebRTC client...")
-            # Ensure final cleanup happens within the loop
-            if self.loop.is_running():
-                self.loop.run_until_complete(self._shutdown())
-            self.loop.close()
+        self.loop.run_until_complete(self.connect()) # Call the actual connect method
 
-    def close(self):
-        """Schedules the shutdown of the WebRTC client from another thread."""
-        if self.loop:
-            self.loop.call_soon_threadsafe(
-                lambda: asyncio.ensure_future(self._shutdown())
-            )
-
-    async def _shutdown(self):
-        """Coroutine that handles the actual cleanup and stopping of the loop."""
-        if self.peer and not self.peer.destroyed:
-            await self.peer.destroy()
-        
-        # Stop the asyncio event loop
-        if self.loop and self.loop.is_running():
-            self.loop.stop()
-
-    async def connect(self, backend_peer_id: str):
-        """
-        Connects to the PeerJS server using peerpy and waits for a connection.
-        """
-        self.peer = Peer(backend_peer_id, host=PEERJS_HOST, port=PEERJS_PORT, path=PEERJS_PATH)
-
-        @self.peer.on('open')
-        async def on_open(peer_id):
-            logger.info(f"PeerJS connection open. Registered with ID: {peer_id}")
-
-        @self.peer.on('connection')
-        async def on_connection(conn):
-            logger.info(f"Data connection received from: {conn.peer}")
-            self.data_channel = conn
+    async def connect(self):
+        @self.pc.on("datachannel")
+        def on_datachannel(channel: RTCDataChannel):
+            logger.info(f"Data channel '{channel.label}' created by remote.")
+            self.data_channel = channel
             self._setup_channel_events()
 
-        @self.peer.on('error')
-        async def on_error(err):
-            logger.error(f"A PeerJS error occurred: {err}")
-            self.result_queue.put({"type": "error", "payload": str(err)})
-
-        # This will connect to the PeerJS server and keep the connection alive
-        await self.peer.start()
+        session = aiohttp.ClientSession()
+        ws_url = f"{SIGNALING_URL}{self.backend_peer_id}"
         
-        # Keep the coroutine alive to handle events
-        while self.peer and not self.peer.destroyed:
-            await asyncio.sleep(1)
+        async with session.ws_connect(ws_url) as ws:
+            logger.info(f"Connected to custom signaling server at {ws_url}")
+            
+            # Wait for an offer from the frontend
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    await self.handle_signaling(ws, json.loads(msg.data))
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    break
+        await session.close()
+
+    async def handle_signaling(self, ws, message):
+        msg_type = message.get('type')
+        if msg_type == 'offer':
+            self.frontend_peer_id = message.get('src')
+            logger.info(f"Received OFFER from frontend peer: {self.frontend_peer_id}")
+            
+            offer = RTCSessionDescription(sdp=message['payload']['sdp'], type=message['payload']['type'])
+            await self.pc.setRemoteDescription(offer)
+            
+            answer = await self.pc.createAnswer()
+            await self.pc.setLocalDescription(answer)
+            
+            payload = {
+                "type": "answer",
+                "dst": self.frontend_peer_id,
+                "payload": {"type": self.pc.localDescription.type, "sdp": self.pc.localDescription.sdp}
+            }
+            await ws.send_str(json.dumps(payload))
+            logger.info("Sent ANSWER to frontend peer.")
 
     def _setup_channel_events(self):
-        """Sets up the event listeners for the data channel."""
-        if not self.data_channel:
-            return
+        if not self.data_channel: return
 
-        @self.data_channel.on('data')
-        async def on_data(data):
+        @self.data_channel.on("message")
+        def on_message(message):
             try:
-                message = json.loads(data)
-                self.result_queue.put(message)
-            except (json.JSONDecodeError, TypeError):
-                 logger.warning(f"Received non-JSON or unexpected data: {data}")
+                data = json.loads(message)
+                self.result_queue.put(data)
+            except Exception as e:
+                logger.warning(f"Failed to process message: {e}")
 
-        @self.data_channel.on('open')
-        async def on_open():
-            logger.info("Data channel is open and ready for communication.")
-            # Start the action sender task now that the channel is open
-            asyncio.create_task(self._action_sender())
+        @self.data_channel.on("open")
+        def on_open():
+            logger.info("Data channel is open.")
+            self.result_queue.put({"type": "connection_ready"})
+            self.loop.create_task(self._action_sender())
 
     async def _action_sender(self):
-        """
-        Continuously checks the action_queue for actions to send to the frontend.
-        """
-        while True:
+        while self.data_channel and self.data_channel.readyState == "open":
             try:
-                action_to_send = await self.loop.run_in_executor(
-                    None, self.action_queue.get
-                )
-                if self.data_channel and not self.data_channel.closed:
-                    payload = json.dumps(action_to_send)
-                    await self.data_channel.send(payload)
-                else:
-                    logger.warning("Data channel not open or has closed, stopping sender.")
-                    break # Exit loop if channel is closed
+                action = await self.loop.run_in_executor(None, self.action_queue.get, 0.1)
+                self.data_channel.send(json.dumps(action))
+            except queue.Empty:
+                continue
             except Exception as e:
                 logger.error(f"Error in action sender: {e}")
                 break
-            await asyncio.sleep(0.01)
+
+    def close(self):
+        if self.loop:
+            self.loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.pc.close()))

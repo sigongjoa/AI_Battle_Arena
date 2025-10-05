@@ -40,7 +40,7 @@ interface MatchRequest {
   sessionId: string;
 }
 
-const SIGNALING_SERVER_URL = 'ws://localhost:8765'; // 시그널링 서버 URL
+const SIGNALING_SERVER_URL = 'ws://localhost:8001/ws'; // 시그널링 서버 URL (백엔드와 일치)
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState(Screen.MainMenu);
@@ -76,10 +76,8 @@ const App: React.FC = () => {
 
   // --- Signaling Client Initialization and Event Handling ---
   useEffect(() => {
-    // Only initialize signaling for non-RL modes
-    if (gameMode === 'rl_training') {
-      return;
-    }
+    // Initialize signaling for all modes, including RL training.
+    // The backend_peer_id from URL will be used for RL training mode.
 
     // Generate a unique player ID if not already set
     if (!playerId) {
@@ -151,6 +149,21 @@ const App: React.FC = () => {
 
       // Connect to signaling server
       signalingClient.current.connect(playerId);
+
+      // If in RL training mode, initialize WebRtcClient immediately
+      if (gameMode === 'rl_training') {
+        const backendPeerId = new URLSearchParams(window.location.search).get('backend_peer_id');
+        if (playerId && backendPeerId) {
+          console.log('Creating WebRTC client for RL training mode');
+          webRtcClient.current = new WebRtcClient({
+            signalingClient: signalingClient.current!,
+            localPlayerId: playerId,
+            remotePlayerId: backendPeerId,
+            initiator: true, // Frontend is always initiator in RL training mode
+          });
+          webRtcClient.current.start(); // Call the new start method
+        }
+      }
     }
 
     return () => {

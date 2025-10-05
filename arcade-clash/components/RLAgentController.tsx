@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import Peer, { DataConnection } from 'peerjs';
 import { GameEngine } from '@/src/shared_game_logic/engine';
 import { BackendMessage, FrontendMessage } from '@/types';
+
+const SIGNALING_URL = 'ws://localhost:8001/ws/';
 
 interface RLAgentControllerProps {
   backendPeerId: string;
@@ -9,43 +10,76 @@ interface RLAgentControllerProps {
 }
 
 const RLAgentController: React.FC<RLAgentControllerProps> = ({ backendPeerId, gameEngine }) => {
-  const peerRef = useRef<Peer | null>(null);
-  const connRef = useRef<DataConnection | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const dcRef = useRef<RTCDataChannel | null>(null);
 
   useEffect(() => {
-    const peer = new Peer();
-    peerRef.current = peer;
+    const frontendPeerId = `frontend_${Math.random().toString(36).substr(2, 9)}`;
+    const ws = new WebSocket(`${SIGNALING_URL}${frontendPeerId}`);
+    wsRef.current = ws;
 
-    peer.on('open', (id) => {
-      console.log('RLAgentController: My peer ID is:', id);
-      if (backendPeerId) {
-        console.log(`RLAgentController: Attempting to connect to backend peer: ${backendPeerId}`);
-        const conn = peer.connect(backendPeerId);
-        connRef.current = conn;
-        setupConnectionListeners(conn);
+    const pc = new RTCPeerConnection();
+    pcRef.current = pc;
+
+    // -- WebSocket Signaling Logic --
+    ws.onopen = () => {
+      console.log('RLAgentController: Connected to custom signaling server.');
+      // Once connected, create data channel and send offer
+      setupPeerConnection();
+    };
+
+    ws.onmessage = async (event) => {
+      const message = JSON.parse(event.data);
+      console.log('RLAgentController: Received signaling message:', message);
+
+      if (message.type === 'answer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(message.payload));
+        console.log('RLAgentController: Remote description (answer) set.');
       }
-    });
+    };
 
-    peer.on('error', (err) => {
-      console.error('RLAgentController: PeerJS error:', err);
-    });
+    ws.onerror = (error) => {
+      console.error('RLAgentController: WebSocket error:', error);
+    };
+
+    const setupPeerConnection = async () => {
+      // Create Data Channel - must be done before creating offer
+      const dc = pc.createDataChannel('game-data');
+      dcRef.current = dc;
+      setupDataChannelListeners(dc);
+
+      // Create Offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Send Offer to backend via signaling server
+      const offerMessage = {
+        type: 'offer',
+        dst: backendPeerId,
+        payload: { type: offer.type, sdp: offer.sdp },
+      };
+      ws.send(JSON.stringify(offerMessage));
+      console.log('RLAgentController: Sent offer to backend.');
+    };
 
     return () => {
-      console.log('RLAgentController: Cleaning up PeerJS connection.');
-      connRef.current?.close();
-      peerRef.current?.destroy();
+      console.log('RLAgentController: Cleaning up connections.');
+      dcRef.current?.close();
+      pcRef.current?.close();
+      wsRef.current?.close();
     };
   }, [backendPeerId]);
 
-  const setupConnectionListeners = (conn: DataConnection) => {
-    conn.on('open', () => {
-      console.log(`RLAgentController: Data connection opened with ${conn.peer}`);
+  const setupDataChannelListeners = (dc: RTCDataChannel) => {
+    dc.onopen = () => {
+      console.log(`RLAgentController: Data channel is open!`);
       const readyMsg: FrontendMessage = { type: 'connection_ready' };
-      conn.send(readyMsg);
-    });
+      dc.send(JSON.stringify(readyMsg));
+    };
 
-    conn.on('data', (data) => {
-      const message = data as BackendMessage;
+    dc.onmessage = (event) => {
+      const message = JSON.parse(event.data) as BackendMessage;
       const engine = gameEngine.current;
       if (!engine) return;
 
@@ -61,7 +95,7 @@ const RLAgentController: React.FC<RLAgentControllerProps> = ({ backendPeerId, ga
           reward,
           done,
         };
-        conn.send(response);
+        dc.send(JSON.stringify(response));
 
       } else if (message.type === 'reset') {
         engine.resetForRL();
@@ -71,16 +105,16 @@ const RLAgentController: React.FC<RLAgentControllerProps> = ({ backendPeerId, ga
           type: 'reset_result',
           observation,
         };
-        conn.send(response);
+        dc.send(JSON.stringify(response));
       }
-    });
+    };
 
-    conn.on('close', () => {
-      console.log(`RLAgentController: Data connection closed with ${conn.peer}`);
-    });
+    dc.onclose = () => {
+      console.log(`RLAgentController: Data channel closed.`);
+    };
   };
 
-  return null;
+  return null; // This is a headless component
 };
 
 export default RLAgentController;
