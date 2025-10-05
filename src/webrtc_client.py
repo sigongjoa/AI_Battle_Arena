@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants for PeerJS Server
-PEERJS_HOST = '0.0.0.0'
+PEERJS_HOST = 'localhost'
 PEERJS_PORT = 9000
 PEERJS_PATH = '/myapp'
 
@@ -40,9 +40,26 @@ class WebRTCClient:
             pass
         finally:
             logger.info("Shutting down WebRTC client...")
-            if self.loop.is_running() and self.peer and not self.peer.destroyed:
-                self.loop.run_until_complete(self.peer.destroy())
+            # Ensure final cleanup happens within the loop
+            if self.loop.is_running():
+                self.loop.run_until_complete(self._shutdown())
             self.loop.close()
+
+    def close(self):
+        """Schedules the shutdown of the WebRTC client from another thread."""
+        if self.loop:
+            self.loop.call_soon_threadsafe(
+                lambda: asyncio.ensure_future(self._shutdown())
+            )
+
+    async def _shutdown(self):
+        """Coroutine that handles the actual cleanup and stopping of the loop."""
+        if self.peer and not self.peer.destroyed:
+            await self.peer.destroy()
+        
+        # Stop the asyncio event loop
+        if self.loop and self.loop.is_running():
+            self.loop.stop()
 
     async def connect(self, backend_peer_id: str):
         """

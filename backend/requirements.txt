@@ -11,4 +11,3 @@ websockets
 aiortc>=1.6.0
 aiohttp>=3.9.5
 peerpy
-requests
