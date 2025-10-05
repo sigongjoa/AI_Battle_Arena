@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { WebRtcClient } from '../src/webrtc/client';
 import { GameEngine } from '../src/shared_game_logic/engine';
 import { GameState, CharacterState } from '../src/shared_game_logic/game_state';
 import { PlayerInput } from '../src/shared_game_logic/input_data';
 import { FixedPoint } from '../src/shared_game_logic/fixed_point';
-// import { Screen } from '../types'; // Screen enum is not directly used here anymore
+import RLAgentController from '@/components/RLAgentController';
 
 interface GameScreenProps {
     webRtcClient: WebRtcClient;
@@ -19,7 +19,12 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [keys, setKeys] = useState<Record<string, boolean>>({});
 
-    // Helper to create initial game state (moved inside component)
+    // --- RL Mode Detection ---
+    const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
+    const isRLMode = useMemo(() => urlParams.get('mode') === 'rl_training', [urlParams]);
+    const backendPeerId = useMemo(() => urlParams.get('backend_peer_id'), [urlParams]);
+
+    // Helper to create initial game state
     const createInitialGameState = (p1Id: string, p2Id: string): GameState => {
         return {
             frame: 0,
@@ -51,18 +56,22 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
 
     // Initialize Game Engine
     useEffect(() => {
-        const initialState = createInitialGameState(localPlayerId, remotePlayerId);
+        const p1 = isRLMode ? 'ai_player_1' : localPlayerId;
+        const p2 = isRLMode ? 'ai_player_2' : remotePlayerId;
+        const initialState = createInitialGameState(p1, p2);
         gameEngine.current = new GameEngine(
             initialState,
             FixedPoint.fromFloat(1 / 60),
-            localPlayerId,
-            remotePlayerId
+            p1,
+            p2
         );
         setGameState(initialState);
-    }, [localPlayerId, remotePlayerId]);
+    }, [isRLMode, localPlayerId, remotePlayerId]);
 
-    // Keyboard input handler
+    // Keyboard input handler (only for non-RL mode)
     useEffect(() => {
+        if (isRLMode) return;
+
         const handleKeyDown = (e: KeyboardEvent) => setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: true }));
         const handleKeyUp = (e: KeyboardEvent) => setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: false }));
 
@@ -73,10 +82,12 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, []);
+    }, [isRLMode]);
 
-    // WebRTC message handler
+    // WebRTC message handler (only for non-RL mode)
     useEffect(() => {
+        if (isRLMode) return;
+
         const handleMessage = ({ channel, data }: { channel: string, data: any }) => {
             if (channel === 'game_input' && gameEngine.current) {
                 const remoteInput: PlayerInput = JSON.parse(data);
@@ -88,7 +99,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
         return () => {
             webRtcClient.off('dataChannelMessage', handleMessage);
         };
-    }, [webRtcClient]);
+    }, [isRLMode, webRtcClient]);
 
     // Main game loop
     useEffect(() => {
@@ -99,24 +110,28 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
         const loop = () => {
             const engine = gameEngine.current!;
 
-            // 1. Create local input
-            const localInput: PlayerInput = {
-                frame: engine.getGameState().frame + 1,
-                playerId: localPlayerId,
-                inputs: {
-                    left: keys['a'] || false,
-                    right: keys['d'] || false,
-                    jump: keys['w'] || false,
-                    attack: keys[' '] || false, // Space bar for attack
-                    guard: keys['s'] || false, // 's' key for guarding
-                },
-            };
+            // In non-RL mode, process local input and send it
+            if (!isRLMode) {
+                const localInput: PlayerInput = {
+                    frame: engine.getGameState().frame + 1,
+                    playerId: localPlayerId,
+                    inputs: {
+                        left: keys['a'] || false,
+                        right: keys['d'] || false,
+                        jump: keys['w'] || false,
+                        attack: keys[' '] || false, // Space bar for attack
+                        guard: keys['s'] || false, // 's' key for guarding
+                    },
+                };
+                engine.update(localInput);
+                webRtcClient.send(JSON.stringify(localInput));
+            } else {
+                // In RL mode, the engine is updated by RLAgentController.
+                // We just need to advance the frame and render.
+                // TODO: This assumes RLAgentController's applyExternalAction ticks the engine.
+                // A better approach might be a separate engine.tick() method.
+            }
 
-            // 2. Update engine and send input
-            engine.update(localInput);
-            webRtcClient.send(JSON.stringify(localInput));
-
-            // 3. Get new state and render
             const newState = engine.getGameState();
             setGameState(newState);
             renderGame(newState);
@@ -129,7 +144,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [keys, webRtcClient, localPlayerId]);
+    }, [isRLMode, keys, webRtcClient, localPlayerId]);
 
     const renderGame = (state: GameState | null) => {
         const canvas = canvasRef.current;
@@ -199,11 +214,17 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
 
     return (
         <div className="w-full h-screen flex flex-col items-center justify-center bg-primary-bg">
-            <h1 className="text-white text-2xl mb-4">Game In Progress</h1>
+            {/* Conditionally render the RL Controller if in RL mode and peer ID is provided */}
+            {isRLMode && backendPeerId && <RLAgentController backendPeerId={backendPeerId} gameEngine={gameEngine} />}
+
+            <h1 className="text-white text-2xl mb-4">
+                {isRLMode ? "RL Training In Progress" : "Game In Progress"}
+            </h1>
             <canvas ref={canvasRef} width="800" height="400" className="bg-gray-800" />
             <div className="text-white mt-4">
                 <p>P1 X: {gameState?.player1.position.x.toFloat().toFixed(2)} | P2 X: {gameState?.player2.position.x.toFloat().toFixed(2)}</p>
                 <p>Frame: {gameState?.frame}</p>
+                {isRLMode && <p className="text-green-400">AI AGENT CONNECTED</p>}
             </div>
             <button onClick={onNavigate} className="mt-4 text-highlight-yellow">Exit Game</button>
         </div>

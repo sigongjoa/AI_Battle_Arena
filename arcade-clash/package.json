@@ -21,11 +21,11 @@
     "msgpack-lite": "^0.1.26",
     "nice-grpc-common": "^2.0.2",
     "nice-grpc-web": "^3.3.8",
+    "peerjs": "^1.5.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "rxjs": "^7.0.0",
-    "util-browser": "^0.0.2",
-    "peerjs": "^1.5.4"
+    "util-browser": "^0.0.2"
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-connect-es": "^0.13.0",

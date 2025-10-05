@@ -105,6 +105,117 @@ export class GameEngine {
         this.checkAndRollback();
     }
 
+    // --- NEW METHODS FOR RL AGENT CONTROL ---
+
+    public resetForRL(): void {
+        // This method re-initializes the game state for a new RL episode.
+        const initialState: GameState = {
+            frame: 0,
+            randomSeed: 12345, // Or a new random seed
+            player1: {
+                id: this._localPlayerId, // The AI player
+                position: { x: FixedPoint.fromFloat(-5), y: FixedPoint.fromFloat(0) },
+                velocity: { x: FixedPoint.fromFloat(0), y: FixedPoint.fromFloat(0) },
+                health: FixedPoint.fromInt(100),
+                isGrounded: true,
+                action: 'idle',
+                actionFrame: 0,
+                hitbox: null,
+                hurtbox: { x: FixedPoint.fromFloat(-0.5), y: FixedPoint.fromFloat(0), width: FixedPoint.fromFloat(1), height: FixedPoint.fromFloat(1) },
+            },
+            player2: {
+                id: this._remotePlayerId, // The opponent
+                position: { x: FixedPoint.fromFloat(5), y: FixedPoint.fromFloat(0) },
+                velocity: { x: FixedPoint.fromFloat(0), y: FixedPoint.fromFloat(0) },
+                health: FixedPoint.fromInt(100),
+                isGrounded: true,
+                action: 'idle',
+                actionFrame: 0,
+                hitbox: null,
+                hurtbox: { x: FixedPoint.fromFloat(-0.5), y: FixedPoint.fromFloat(0), width: FixedPoint.fromFloat(1), height: FixedPoint.fromFloat(1) },
+            },
+        };
+        this._gameState = initialState;
+        this._currentFrame = 0;
+        this._syncFrame = 0;
+        this._stateHistory.clear();
+        this._playerInputs.clear();
+        this.saveState(0);
+        console.log("GameEngine: State has been reset for RL.");
+    }
+
+    public applyExternalAction(action: number): void {
+        const aiPlayerId = this._localPlayerId; // In RL mode, localPlayerId is the AI
+
+        const generatedInput: PlayerInput = {
+            frame: this.getGameState().frame + 1,
+            playerId: aiPlayerId,
+            inputs: {
+                left: action === 2, // MOVE_BWD
+                right: action === 1, // MOVE_FWD
+                jump: action === 3, // JUMP
+                attack: action === 4 || action === 5, // ATTACK_1 or ATTACK_2
+                guard: false, // TODO: Add guard to action space if needed
+            },
+        };
+        
+        // In RL mode, the opponent can have a dummy input or a simple built-in AI.
+        const opponentInput: PlayerInput = {
+            frame: this.getGameState().frame + 1,
+            playerId: this._remotePlayerId,
+            inputs: { left: false, right: false, jump: false, attack: false, guard: false },
+        };
+
+        this._currentFrame++;
+        this.storeLocalInput(generatedInput);
+        this.storeRemoteInput(opponentInput);
+
+        const inputsForFrame = {
+            [this._localPlayerId]: generatedInput,
+            [this._remotePlayerId]: opponentInput,
+        };
+
+        this.simulateFrame(inputsForFrame as { [playerId: string]: PlayerInput });
+        this.saveState(this._currentFrame);
+    }
+
+    public getObservationForAgent(): number[] {
+        const state = this._gameState;
+        const p1 = state.player1;
+        const p2 = state.player2;
+
+        // TODO: Use actual world/screen dimensions for normalization instead of hardcoded values
+        const WORLD_WIDTH = 20; 
+        const MAX_HEALTH = 100;
+
+        const normalizeX = (val: FixedPoint) => (val.toFloat() / (WORLD_WIDTH / 2) + 1) / 2;
+        const normalizeHealth = (val: FixedPoint) => val.toFloat() / MAX_HEALTH;
+        
+        const mapActionToNumber = (action: string): number => {
+            switch(action) {
+                case 'idle': return 0;
+                case 'moving': return 1;
+                case 'attacking': return 2;
+                case 'hitstun': return 3;
+                case 'guarding': return 4;
+                default: return 0;
+            }
+        }
+
+        const observation = [
+            normalizeX(p1.position.x),
+            p1.position.y.toFloat(), // Assuming y is already in a good range
+            normalizeHealth(p1.health),
+            mapActionToNumber(p1.action),
+            normalizeX(p2.position.x),
+            p2.position.y.toFloat(),
+            normalizeHealth(p2.health),
+            mapActionToNumber(p2.action),
+        ];
+
+        return observation;
+    }
+
     // --- State Management & Rollback ---
 
     private saveState(frame: number): void {
