@@ -1,3 +1,4 @@
+import os
 import asyncio
 import json
 import logging
@@ -12,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants for PeerJS Server
-PEERJS_HOST = 'localhost'
+PEERJS_HOST = os.getenv('PEERJS_HOST', '127.0.0.1')
 PEERJS_PORT = 9000
 PEERJS_PATH = '/myapp'
 
