@@ -72,8 +72,15 @@ const App: React.FC = () => {
     fetchCharacters();
   }, []);
 
+  const gameMode = new URLSearchParams(window.location.search).get('mode');
+
   // --- Signaling Client Initialization and Event Handling ---
   useEffect(() => {
+    // Only initialize signaling for non-RL modes
+    if (gameMode === 'rl_training') {
+      return;
+    }
+
     // Generate a unique player ID if not already set
     if (!playerId) {
       setPlayerId(`player_${Math.random().toString(36).substr(2, 9)}`);
