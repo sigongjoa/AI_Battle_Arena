@@ -5,6 +5,7 @@ import { GameState, CharacterState } from '../src/shared_game_logic/game_state';
 import { PlayerInput } from '../src/shared_game_logic/input_data';
 import { FixedPoint } from '../src/shared_game_logic/fixed_point';
 import RLAgentController from '@/components/RLAgentController';
+import AdCharacterGenerator from '@/components/AdCharacterGenerator'; // Import AdCharacterGenerator
 
 interface GameScreenProps {
     webRtcClient?: WebRtcClient; // Made optional for RL mode
@@ -18,6 +19,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
     const gameEngine = useRef<GameEngine | null>(null);
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [keys, setKeys] = useState<Record<string, boolean>>({});
+    const [showAdCharacterGenerator, setShowAdCharacterGenerator] = useState<boolean>(false); // State to control visibility
 
     // --- RL Mode Detection ---
     const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -228,6 +230,27 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
                 {isRLMode && <p className="text-green-400">AI AGENT CONNECTED</p>}
             </div>
             <button onClick={onNavigate} className="mt-4 text-highlight-yellow">Exit Game</button>
+
+            {/* Phase 6: Ad-based Character Generator Integration */}
+            <button 
+                onClick={() => setShowAdCharacterGenerator(!showAdCharacterGenerator)}
+                className="mt-4 text-blue-400 p-2 border border-blue-400 rounded"
+            >
+                {showAdCharacterGenerator ? '캐릭터 생성기 닫기' : '광고 캐릭터 생성기 열기'}
+            </button>
+            {showAdCharacterGenerator && gameEngine.current && (
+                <div className="mt-4 p-4 bg-gray-700 rounded">
+                    <AdCharacterGenerator 
+                        onCharacterGenerated={(characterData) => {
+                            if (gameEngine.current) {
+                                // For demonstration, load into player2
+                                gameEngine.current.loadGeneratedCharacter(characterData, gameState?.player2.id || 'player2');
+                                setGameState({ ...gameEngine.current.getGameState() }); // Force re-render
+                            }
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 };

@@ -1,12 +1,16 @@
-# api/routes.py
 from typing import List
 
 from fastapi import APIRouter, HTTPException
 
 from ..data import game_data
-from .dto import CharacterDTO, MatchupRequest, MatchupResponse, MoveDTO
+from ..core.ad_analyzer import AdAnalyzer
+from ..core.character_generator import CharacterGenerator
+from .dto import CharacterDTO, MatchupRequest, MatchupResponse, MoveDTO, CharacterThemeResponse, CharacterData, CharacterGenerationRequest
 
 router = APIRouter()
+
+ad_analyzer = AdAnalyzer() # AdAnalyzer 인스턴스 생성
+character_generator = CharacterGenerator() # CharacterGenerator 인스턴스 생성
 
 
 @router.get("/characters", response_model=List[CharacterDTO])
@@ -38,3 +42,21 @@ async def get_matchup_analysis(request: MatchupRequest):
         player1_analysis=f"{request.player1_name}은(는) {request.player2_name}을(를) 상대로 강한 면모를 보입니다.",
         player2_analysis=f"{request.player2_name}은(는) {request.player1_name}을(를) 상대로 전략적인 접근이 필요합니다.",
     )
+
+
+@router.get("/character-theme", response_model=CharacterThemeResponse)
+async def get_character_theme(ad_text: str):
+    """
+    광고 텍스트를 분석하여 캐릭터 테마와 속성을 추출합니다.
+    """
+    theme_data = ad_analyzer.extract_character_theme(ad_text)
+    return CharacterThemeResponse(theme=theme_data["theme"], attributes=theme_data["attributes"])
+
+
+@router.post("/generate-character", response_model=CharacterData)
+async def generate_character(request: CharacterGenerationRequest):
+    """
+    테마와 속성을 기반으로 캐릭터 데이터를 생성합니다.
+    """
+    character_data = character_generator.generate_character_data(request.theme, request.attributes)
+    return CharacterData(**character_data)

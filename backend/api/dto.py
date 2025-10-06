@@ -1,5 +1,5 @@
 # api/dto.py
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -59,3 +59,44 @@ class MatchupRequest(BaseModel):
 class MatchupResponse(BaseModel):
     player1_analysis: str
     player2_analysis: str
+
+
+# 1.5. 캐릭터 테마 응답 (API용)
+class CharacterThemeResponse(BaseModel):
+    theme: str
+    attributes: List[str]
+
+
+# 1.6. 캐릭터 데이터 (API용)
+class AppearanceData(BaseModel):
+    modelId: str
+    textureId: str
+    colorScheme: List[str]
+    parts: List[str]
+
+
+class SkillData(BaseModel):
+    name: str
+    effect: str
+    animationId: str
+
+
+class ParameterData(BaseModel):
+    health: int
+    attackPower: int
+    defense: int
+    speed: int
+
+
+class CharacterData(BaseModel):
+    id: str
+    theme: str
+    appearance: AppearanceData
+    skills: List[SkillData]
+    parameters: ParameterData
+
+
+# 1.7. 캐릭터 생성 요청 (API용)
+class CharacterGenerationRequest(BaseModel):
+    theme: str
+    attributes: List[str]

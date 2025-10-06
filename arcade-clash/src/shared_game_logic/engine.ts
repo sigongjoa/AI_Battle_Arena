@@ -1,6 +1,7 @@
 import { FixedPoint } from './fixed_point';
 import { GameState, CharacterState } from './game_state';
 import { PlayerInput } from './input_data';
+import { CharacterData, AppearanceData, SkillData, ParameterData } from '@/types'; // Import new interfaces
 
 // Helper function to map numeric action IDs to string representations
 const mapActionIdToString = (actionId: number): string => {
@@ -41,6 +42,20 @@ export class GameEngine {
 
     public getGameState(): GameState {
         return this.gameState;
+    }
+
+    public loadGeneratedCharacter(characterData: CharacterData, targetPlayerId: string): void {
+        const playerToUpdate = this.gameState.player1.id === targetPlayerId ? this.gameState.player1 : this.gameState.player2;
+
+        // Update player properties based on generated character data
+        playerToUpdate.id = characterData.id; // Update ID to generated ID
+        playerToUpdate.health = FixedPoint.fromInt(characterData.parameters.health);
+        // For now, we'll just update health and action. Other parameters (attackPower, defense, speed) 
+        // and skills would require more complex game logic integration.
+        playerToUpdate.action = 'idle'; // Reset action
+        // appearance data would be used by rendering logic, not directly in GameState for now
+
+        console.log(`Loaded generated character ${characterData.theme} for player ${targetPlayerId}`);
     }
 
     public applyExternalAction(actionId: number): void {

@@ -31,3 +31,32 @@ export interface Move {
     input: string;
     frameData: string;
 }
+
+// Phase 6: 캐릭터 생성 시스템 관련 인터페이스
+export interface AppearanceData {
+    modelId: string;
+    textureId: string;
+    colorScheme: string[];
+    parts: string[];
+}
+
+export interface SkillData {
+    name: string;
+    effect: string;
+    animationId: string;
+}
+
+export interface ParameterData {
+    health: number;
+    attackPower: number;
+    defense: number;
+    speed: number;
+}
+
+export interface CharacterData {
+    id: string;
+    theme: string;
+    appearance: AppearanceData;
+    skills: SkillData[];
+    parameters: ParameterData;
+}
