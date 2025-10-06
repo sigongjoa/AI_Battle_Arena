@@ -74,38 +74,52 @@ const RLAgentController: React.FC<RLAgentControllerProps> = ({ backendPeerId, ga
   const setupDataChannelListeners = (dc: RTCDataChannel) => {
     dc.onopen = () => {
       console.log(`RLAgentController: Data channel is open!`);
+      console.log("RLAgentController: Sending 'connection_ready'.");
       const readyMsg: FrontendMessage = { type: 'connection_ready' };
       dc.send(JSON.stringify(readyMsg));
     };
 
     dc.onmessage = (event) => {
-      const message = JSON.parse(event.data) as BackendMessage;
-      const engine = gameEngine.current;
-      if (!engine) return;
+      try {
+        console.log(`RLAgentController: Received message:`, event.data);
+        const message = JSON.parse(event.data) as BackendMessage;
+        const engine = gameEngine.current;
 
-      if (message.type === 'action') {
-        engine.applyExternalAction(message.action);
-        const observation = engine.getObservationForAgent();
-        const reward = 0; // TODO: Implement reward calculation
-        const done = false; // TODO: Implement done condition check
+        if (!engine) {
+          console.error("RLAgentController: GameEngine is not available.");
+          return;
+        }
 
-        const response: FrontendMessage = {
-          type: 'step_result',
-          observation,
-          reward,
-          done,
-        };
-        dc.send(JSON.stringify(response));
+        if (message.type === 'action') {
+          console.log("RLAgentController: Processing 'action' message.");
+          engine.applyExternalAction(message.action);
+          const observation = engine.getObservationForAgent();
+          const reward = 0; // TODO: Implement reward calculation
+          const done = false; // TODO: Implement done condition check
 
-      } else if (message.type === 'reset') {
-        engine.resetForRL();
-        const observation = engine.getObservationForAgent();
+          const response: FrontendMessage = {
+            type: 'step_result',
+            observation,
+            reward,
+            done,
+          };
+          dc.send(JSON.stringify(response));
+          console.log("RLAgentController: Sent 'step_result'.");
 
-        const response: FrontendMessage = {
-          type: 'reset_result',
-          observation,
-        };
-        dc.send(JSON.stringify(response));
+        } else if (message.type === 'reset') {
+          console.log("RLAgentController: Processing 'reset' message.");
+          engine.resetForRL();
+          const observation = engine.getObservationForAgent();
+
+          const response: FrontendMessage = {
+            type: 'reset_result',
+            observation,
+          };
+          dc.send(JSON.stringify(response));
+          console.log("RLAgentController: Sent 'reset_result'.");
+        }
+      } catch (error) {
+        console.error("RLAgentController: Error in onmessage handler:", error);
       }
     };
 

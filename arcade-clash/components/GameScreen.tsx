@@ -7,10 +7,10 @@ import { FixedPoint } from '../src/shared_game_logic/fixed_point';
 import RLAgentController from '@/components/RLAgentController';
 
 interface GameScreenProps {
-    webRtcClient: WebRtcClient;
+    webRtcClient?: WebRtcClient; // Made optional for RL mode
     localPlayerId: string;
     remotePlayerId: string;
-    onNavigate: () => void; // Changed to a simple callback for exiting game
+    onNavigate: () => void;
 }
 
 const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, remotePlayerId, onNavigate }) => {

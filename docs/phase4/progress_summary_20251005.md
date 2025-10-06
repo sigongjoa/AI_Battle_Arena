@@ -42,7 +42,17 @@
     *   **해결:** `arcade-clash/App.tsx`의 `useEffect` 훅에서 `gameMode === 'rl_training'` 조건으로 인해 시그널링 클라이언트 초기화가 건너뛰어지는 로직을 제거. 또한 `rl_training` 모드일 때 `WebRtcClient`를 초기화하고 `start()` 메서드를 호출하도록 로직 추가.
 *   **현재 상태:** E2E 테스트는 여전히 `Frontend connection timed out.`으로 실패하고 있습니다. 이는 프론트엔드 코드 변경 후 재빌드가 필요하며, `run_e2e_test.py` 스크립트 재시작 및 브라우저 탐색이 적절한 타이밍에 이루어져야 하기 때문입니다.
 
-## 3. 다음 단계
+### 2.2 E2E 테스트 디버깅 (현재 상황)
 
-*   프론트엔드 (`arcade-clash`)가 변경 사항을 반영하여 재빌드되었는지 확인해야 합니다. (일반적으로 `npm run dev`가 자동으로 처리)
-*   `run_e2e_test.py` 스크립트를 다시 실행하고, 스크립트가 URL을 출력하면 즉시 해당 URL로 브라우저를 탐색하여 연결 타임아웃을 방지해야 합니다.
+*   **문제 1: `App.tsx:164 Uncaught TypeError: webRtcClient.current.start is not a function`**
+    *   **원인:** 프론트엔드 (`arcade-clash`)가 `WebRtcClient`에 추가된 `start` 메서드를 인식하지 못함. 이는 `npm run dev`가 변경 사항을 제대로 반영하지 못했거나 캐싱 문제일 가능성이 높음.
+*   **문제 2: PeerJS 서버 연결 거부 (`Failed to load resource: net::ERR_CONNECTION_REFUSED` for `:9000/myapp/peerjs/id?ts=...`)**
+    *   **원인:** PeerJS 서버 (`backend/peerjs_server.js`)가 실행 중이 아니거나 `localhost:9000`에서 접근할 수 없음.
+*   **문제 3: 백엔드 시그널링 서버 연결 거부 (`WebSocket connection to 'ws://localhost:8001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED`)**
+    *   **원인:** `arcade-clash/App.tsx`의 `SIGNALING_SERVER_URL`을 `ws://localhost:8001/ws`로 수정했음에도 불구하고 연결이 거부됨. 백엔드 `uvicorn` 서버가 실행 중이 아니거나, 방화벽 문제, 또는 서버 설정 문제일 수 있음.
+
+### 2.3 제안된 해결책
+
+*   **프론트엔드 개발 서버 재시작:** `npm run dev` 프로세스를 재시작하여 모든 프론트엔드 변경 사항이 반영되도록 합니다.
+*   **PeerJS 서버 시작:** 별도의 터미널에서 `node backend/peerjs_server.js`를 실행하여 PeerJS 서버를 시작합니다.
+*   **백엔드 시그널링 서버 상태 확인:** `uvicorn` 서버의 터미널을 확인하여 WebSocket 연결과 관련된 오류 메시지가 있는지 확인합니다.

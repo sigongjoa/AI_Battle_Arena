@@ -7,10 +7,7 @@ frontend game client.
 '''
 import os
 
-# Forcefully correct the PEERJS_HOST to prevent environment issues
-# This ensures the client connects to 'localhost' instead of '0.0.0.0'
-fix_command = "sed -i \"s/PEERJS_HOST = .*/PEERJS_HOST = 'localhost'/g\" src/webrtc_client.py"
-os.system(fix_command)
+
 
 import sys
 import os
@@ -23,8 +20,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.'))
 from src.fighting_env import FightingEnv
 
 # --- Test Configuration ---
-# Use a unique peer ID for each test run to avoid conflicts
-BACKEND_PEER_ID = f"e2e-test-runner-{int(time.time())}"
+# Use a fixed peer ID for E2E test runs
+BACKEND_PEER_ID = "e2e-test-runner-fixed"
 FRONTEND_URL = f"http://localhost:5174/?mode=rl_training&backend_peer_id={BACKEND_PEER_ID}"
 NUM_EPISODES = 3
 
@@ -33,13 +30,8 @@ def run_test():
     env = None
     print("--- E2E Test for Phase 4: WebRTC RL Environment ---")
     print("\n>>> STEP 1: Backend is starting...")
-    print("\n[ACTION REQUIRED] Please open the following URL in your web browser:")
-    print(f"\n    {FRONTEND_URL}\n")
-    # Write URL to a temporary file for automation
-    e2e_url_file_path = "/home/zesky/.gemini/tmp/5a3ae86eeb7939740c54883a809be8b737022b84051f1ac86ad2c7a78b96e428/e2e_test_url.txt"
-    with open(e2e_url_file_path, "w") as f:
-        f.write(FRONTEND_URL)
-    print(f"URL written to {e2e_url_file_path}")
+    print(f"\n[ACTION REQUIRED] Please open the following URL in your web browser:\n\n    {FRONTEND_URL}\n")
+    # Removed writing URL to a temporary file as the ID is now fixed.
 
     try:
         # Initialize the environment. This will block until the frontend connects.
@@ -66,10 +58,15 @@ def run_test():
                     break
             print(f"--- Episode {i + 1} finished after {step_count} steps. ---")
 
-        print("\n[SUCCESS] E2E test completed successfully!")
+        result_message = "\n[SUCCESS] E2E test completed successfully!"
+        print(result_message)
+        with open("/home/zesky/.gemini/tmp/5a3ae86eeb7939740c54883a809be8b737022b84051f1ac86ad2c7a78b96e428/e2e_test_result.txt", "w") as f:
+            f.write(result_message)
 
-    except Exception as e:
-        print(f"\n[FAILURE] An error occurred during the E2E test: {e}")
+        with open("/home/zesky/.gemini/tmp/5a3ae86eeb7939740c54883a809be8b737022b84051f1ac86ad2c7a78b96e428/e2e_test_result.txt", "w") as f:
+            f.write(result_message)
+            f.flush() # Ensure data is written to OS buffer
+            os.fsync(f.fileno()) # Ensure OS buffer is written to disk
     finally:
         if env:
             print("\n>>> STEP 3: Closing environment and cleaning up...")

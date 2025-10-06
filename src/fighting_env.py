@@ -64,6 +64,7 @@ class FightingEnv(gym.Env):
             raise ConnectionAbortedError("Frontend connection timed out.")
 
     def step(self, action):
+        logger.info("Putting 'action' on action queue.")
         self.action_queue.put({"type": "action", "action": int(action)})
         try:
             result = self.result_queue.get(timeout=10) # 10-second timeout for step
@@ -87,6 +88,7 @@ class FightingEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         
+        logger.info("Putting 'reset' on action queue.")
         self.action_queue.put({"type": "reset"})
         try:
             result = self.result_queue.get(timeout=10) # 10-second timeout for reset
@@ -114,9 +116,12 @@ class FightingEnv(gym.Env):
         """
         Closes the WebRTC connection and cleans up resources.
         """
-        if self.webrtc_client and self.webrtc_client.loop:
-            # Schedule the close coroutine to be run on the event loop
-            self.webrtc_client.loop.call_soon_threadsafe(
-                lambda: asyncio.ensure_future(self.webrtc_client.close())
-            )
+        # Send a close signal to the action queue to unblock the sender loop
+        self.action_queue.put({"type": "close"})
+
+        if self.webrtc_thread and self.webrtc_thread.is_alive():
+            if self.webrtc_client and self.webrtc_client.loop and self.webrtc_client.loop.is_running():
+                self.webrtc_client.loop.call_soon_threadsafe(self.webrtc_client.close)
+            self.webrtc_thread.join(timeout=5)
+        
         logger.info("FightingEnv closed.")

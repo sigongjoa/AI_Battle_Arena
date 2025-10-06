@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
-// import './index.css'; // Removed as it's already linked in index.html
+import React, { useEffect, useMemo, useState } from 'react';
 import MainMenu from './components/MainMenu';
 import GameScreen from './components/GameScreen';
 import CharacterSelect from './components/CharacterSelect';
@@ -10,13 +9,11 @@ import MatchResults from './components/MatchResults';
 import MatchupAnalysis from './components/MatchupAnalysis';
 import AnalysisMode from './components/AnalysisMode';
 
-import { SignalingClient } from './src/webrtc/signaling';
-import { WebRtcClient } from './src/webrtc/client';
+// RLAgentController is now used inside GameScreen, so no need to import it here.
 
 // Define screen types
 export enum Screen {
   MainMenu,
-  Lobby, // Added Lobby screen
   CharacterSelect,
   GameScreen,
   TrainingMode,
@@ -27,246 +24,20 @@ export enum Screen {
   AnalysisMode,
 }
 
-// --- Type Definitions for App.tsx --- //
-interface Player {
-  playerId: string;
-  playerName: string;
-  status: 'available' | 'in_match';
-}
-
-interface MatchRequest {
-  requesterId: string;
-  requesterName: string;
-  sessionId: string;
-}
-
-const SIGNALING_SERVER_URL = 'ws://localhost:8001/ws'; // 시그널링 서버 URL (백엔드와 일치)
-
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState(Screen.MainMenu);
-  const [playerId, setPlayerId] = useState<string | null>(null);
-  const signalingClient = useRef<SignalingClient | null>(null);
-  const webRtcClient = useRef<WebRtcClient | null>(null);
+  const [playerId] = useState<string>(`player_${Math.random().toString(36).substr(2, 9)}`);
 
-  const [lobbyPlayers, setLobbyPlayers] = useState<Player[]>([]);
-  const [matchRequest, setMatchRequest] = useState<MatchRequest | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
-  const [remotePlayerId, setRemotePlayerId] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [characters, setCharacters] = useState<Character[]>([]); // New state for characters
+  // --- Game Mode Detection ---
+  const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const gameMode = useMemo(() => urlParams.get('mode'), [urlParams]);
 
-  // --- Fetch Characters from Backend ---
+  // --- Screen Navigation Effect ---
   useEffect(() => {
-    const fetchCharacters = async () => {
-      try {
-        const response = await fetch('http://localhost:8001/api/characters');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: Character[] = await response.json();
-        setCharacters(data);
-      } catch (error) {
-        console.error("Failed to fetch characters:", error);
-      }
-    };
-    fetchCharacters();
-  }, []);
-
-  const gameMode = new URLSearchParams(window.location.search).get('mode');
-
-  // --- Signaling Client Initialization and Event Handling ---
-  useEffect(() => {
-    // Initialize signaling for all modes, including RL training.
-    // The backend_peer_id from URL will be used for RL training mode.
-
-    // Generate a unique player ID if not already set
-    if (!playerId) {
-      setPlayerId(`player_${Math.random().toString(36).substr(2, 9)}`);
+    if (gameMode === 'rl_training') {
+      setCurrentScreen(Screen.GameScreen);
     }
-
-    if (playerId && !signalingClient.current) {
-      signalingClient.current = new SignalingClient(SIGNALING_SERVER_URL);
-
-      signalingClient.current.on('registered', () => {
-        setConnectionStatus('Connected to Signaling Server');
-      });
-
-      signalingClient.current.on('disconnected', () => {
-        setConnectionStatus('Disconnected');
-        setLobbyPlayers([]);
-        setMatchRequest(null);
-        setRemotePlayerId(null);
-        setSessionId(null);
-      });
-
-      signalingClient.current.on('lobbyUpdate', (message: { players: Player[] }) => {
-        setLobbyPlayers([...message.players]); // ✅ 새로운 배열로 복사해서 React가 변경 감지
-        setConnectionStatus('Connected to Lobby');
-      });
-
-      signalingClient.current.on('matchRequestReceived', (message: MatchRequest) => {
-        setMatchRequest(message);
-        setSessionId(message.sessionId);
-      });
-
-      // For the user who sent the request
-      signalingClient.current.on('matchRequestAccepted', (message: { accepterId: string, sessionId: string }) => {
-        console.log('Match request accepted by', message.accepterId);
-        setRemotePlayerId(message.accepterId);
-        setSessionId(message.sessionId);
-        setMatchRequest(null); // Clear modal
-
-        // The requester is the initiator of the WebRTC connection
-        if (playerId && message.accepterId) {
-          console.log('Creating WebRTC client as initiator');
-          webRtcClient.current = new WebRtcClient({
-            signalingClient: signalingClient.current!,
-            localPlayerId: playerId,
-            remotePlayerId: message.accepterId,
-            initiator: true,
-          });
-
-          // Listen for local PeerJS ID and send it to remote
-          webRtcClient.current.on('peerIdReady', (localPeerJsId: string) => {
-            console.log('Local PeerJS ID ready:', localPeerJsId);
-            signalingClient.current!.sendPeerId(message.accepterId, localPeerJsId);
-          });
-        }
-      });
-
-      signalingClient.current.on('matchRequestDeclined', () => {
-        setMatchRequest(null);
-        setSessionId(null);
-        alert('Match request declined.');
-      });
-
-
-
-      signalingClient.current.on('error', (error) => {
-        console.error('Signaling error:', error);
-        setConnectionStatus('Error');
-      });
-
-      // Connect to signaling server
-      signalingClient.current.connect(playerId);
-
-      // If in RL training mode, initialize WebRtcClient immediately
-      if (gameMode === 'rl_training') {
-        const backendPeerId = new URLSearchParams(window.location.search).get('backend_peer_id');
-        if (playerId && backendPeerId) {
-          console.log('Creating WebRTC client for RL training mode');
-          webRtcClient.current = new WebRtcClient({
-            signalingClient: signalingClient.current!,
-            localPlayerId: playerId,
-            remotePlayerId: backendPeerId,
-            initiator: true, // Frontend is always initiator in RL training mode
-          });
-          webRtcClient.current.start(); // Call the new start method
-        }
-      }
-    }
-
-    return () => {
-      if (signalingClient.current) {
-        signalingClient.current.disconnect();
-      }
-    };
-  }, [playerId]);
-
-  // --- WebRTC Client Event Handling ---
-  useEffect(() => {
-    if (webRtcClient.current) {
-      webRtcClient.current.on('connected', () => {
-        console.log('WebRTC P2P Connected!');
-        setCurrentScreen(Screen.GameScreen);
-      });
-      
-      webRtcClient.current.on('data', (data: any) => {
-        console.log('Received data:', data.toString());
-        // TODO: Decode with msgpack and update game state
-      });
-
-      webRtcClient.current.on('closed', () => {
-        console.log('WebRTC connection closed.');
-        if (currentScreen === Screen.GameScreen) {
-          alert('WebRTC connection lost. Returning to lobby.');
-          handleExitGame();
-        }
-      });
-
-      webRtcClient.current.on('error', (err) => {
-        console.error('WebRTC peer error:', err);
-        if (currentScreen === Screen.GameScreen) {
-          alert('WebRTC connection error. Returning to lobby.');
-          handleExitGame();
-        }
-      });
-    }
-  }, [webRtcClient.current, currentScreen]);
-
-  // --- Handlers for MainMenu ---
-  const handleJoinLobby = async (playerName: string): Promise<boolean> => {
-    if (signalingClient.current && playerId) {
-      signalingClient.current.joinLobby(playerName);
-      setConnectionStatus('Connecting...');
-      setCurrentScreen(Screen.Lobby); // Explicitly navigate to Lobby screen after joining
-      return true;
-    }
-    return false;
-  };
-
-  const handleRequestMatch = (targetId: string) => {
-    if (signalingClient.current) {
-      signalingClient.current.requestMatch(targetId);
-    }
-  };
-
-  // For the user who accepts the request
-  const handleAcceptMatch = () => {
-    if (signalingClient.current && sessionId && matchRequest && playerId) {
-      signalingClient.current.acceptMatch(sessionId);
-      
-      console.log('Creating WebRTC client as non-initiator');
-      // The accepter is the non-initiator
-      webRtcClient.current = new WebRtcClient({
-        signalingClient: signalingClient.current!,
-        localPlayerId: playerId,
-        remotePlayerId: matchRequest.requesterId,
-        initiator: false,
-      });
-
-      // Listen for local PeerJS ID and send it to remote
-      webRtcClient.current.on('peerIdReady', (localPeerJsId: string) => {
-        console.log('Local PeerJS ID ready:', localPeerJsId);
-        signalingClient.current!.sendPeerId(matchRequest.requesterId, localPeerJsId);
-      });
-
-      setRemotePlayerId(matchRequest.requesterId);
-      setMatchRequest(null);
-    }
-  };
-
-  const handleDeclineMatch = () => {
-    if (signalingClient.current && sessionId) {
-      signalingClient.current.declineMatch(sessionId);
-      setMatchRequest(null);
-    }
-  };
-
-  // --- Handler for GameScreen ---
-  const handleExitGame = () => {
-    if (webRtcClient.current) {
-      webRtcClient.current.destroy();
-      webRtcClient.current = null; // Clear the ref
-    }
-    setRemotePlayerId(null);
-    setSessionId(null);
-    setCurrentScreen(Screen.MainMenu);
-    // Re-join lobby after exiting game to update status
-    if (signalingClient.current && playerId) {
-      signalingClient.current.joinLobby(lobbyPlayers.find(p => p.playerId === playerId)?.playerName || 'Anonymous');
-    }
-  };
+  }, [gameMode]);
 
   const navigateTo = (screen: Screen) => {
     console.log(`Navigating from ${Screen[currentScreen]} to ${Screen[screen]}`);
@@ -274,53 +45,30 @@ const App: React.FC = () => {
   };
 
   const renderScreen = () => {
+    // In RL Training mode, we directly render the GameScreen.
+    // GameScreen itself will handle the RLAgentController.
+    if (gameMode === 'rl_training') {
+      return (
+        <GameScreen
+          localPlayerId={playerId}
+          remotePlayerId="rl_agent" // Dummy ID for the opponent
+          onNavigate={() => setCurrentScreen(Screen.MainMenu)}
+        />
+      );
+    }
+
+    // The rest of the navigation for non-RL modes
     switch (currentScreen) {
       case Screen.MainMenu:
-        return (
-          <MainMenu
-            onNavigate={navigateTo}
-            playerId={playerId || ''}
-            lobbyPlayers={lobbyPlayers}
-            matchRequest={matchRequest}
-            connectionStatus={connectionStatus}
-            onJoinLobby={handleJoinLobby}
-            onRequestMatch={handleRequestMatch}
-            onAcceptMatch={handleAcceptMatch}
-            onDeclineMatch={handleDeclineMatch}
-            currentSubScreen={'main'}
-          />
-        );
-      case Screen.Lobby: // Render MainMenu for both MainMenu and Lobby screens
-        return (
-          <MainMenu
-            onNavigate={navigateTo}
-            playerId={playerId || ''}
-            lobbyPlayers={lobbyPlayers}
-            matchRequest={matchRequest}
-            connectionStatus={connectionStatus}
-            onJoinLobby={handleJoinLobby}
-            onRequestMatch={handleRequestMatch}
-            onAcceptMatch={handleAcceptMatch}
-            onDeclineMatch={handleDeclineMatch}
-            currentSubScreen={'lobby'}
-          />
-        );
+        return <MainMenu onNavigate={navigateTo} />;
       case Screen.GameScreen:
-        if (webRtcClient.current && playerId && remotePlayerId) {
-          return (
-            <GameScreen
-              webRtcClient={webRtcClient.current}
-              localPlayerId={playerId}
-              remotePlayerId={remotePlayerId}
-              onNavigate={handleExitGame} // Use handleExitGame for GameScreen navigation
-            />
-          );
-        } else {
-          // Fallback if WebRTC client or player IDs are not set (shouldn't happen if flow is correct)
-          return <MainMenu onNavigate={navigateTo} />;
-        }
+         // This path is for non-RL game modes, which are not implemented with the new architecture yet.
+         // We can show a placeholder or the main menu.
+        console.warn("GameScreen in non-RL mode is not supported in this version.");
+        return <MainMenu onNavigate={navigateTo} />;
       case Screen.CharacterSelect:
-        return <CharacterSelect onNavigate={navigateTo} characters={characters} />;
+        // Assuming characters are fetched elsewhere or not needed for this simplified version
+        return <CharacterSelect onNavigate={navigateTo} characters={[]} />;
       case Screen.TrainingMode:
         return <TrainingMode onNavigate={navigateTo} />;
       case Screen.DebugScreen:

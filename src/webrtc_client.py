@@ -9,6 +9,7 @@ import json
 import logging
 import queue
 import aiohttp
+import functools
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCDataChannel
 
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +38,10 @@ class WebRTCClient:
             while True:
                 try:
                     # Use a short timeout to allow the thread to be interrupted or for tests to finish
-                    message = self.action_queue.get(timeout=0.1) 
+                    message = self.action_queue.get(timeout=1) 
+                    if message.get("type") == "close":
+                        logger.info("Test mode: Received close signal.")
+                        break
                     if message["type"] == "reset":
                         logger.info("Test mode: Received reset, sending dummy reset_result.")
                         dummy_obs = np.zeros(8, dtype=np.float32) # Assuming 8-dim observation space
@@ -53,18 +57,27 @@ class WebRTCClient:
                             "reward": dummy_reward,
                             "done": dummy_done
                         })
-                    # Add other message types if necessary
                 except queue.Empty:
-                    # No message, continue loop. This allows the thread to be responsive to shutdown.
                     pass
                 except Exception as e:
                     logger.error(f"Test mode: Error processing action_queue: {e}")
-                    break # Exit loop on error
-            return # Exit run method when loop breaks
+                    break
+            return
 
-        self.loop = asyncio.new_event_loop() # Create event loop in this thread
+        self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self.connect()) # Call the actual connect method
+
+        try:
+            self.loop.create_task(self.connect())
+            self.loop.run_forever()
+        finally:
+            logger.info("Shutting down WebRTC client event loop.")
+            tasks = asyncio.all_tasks(loop=self.loop)
+            for t in tasks:
+                t.cancel()
+            self.loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+            self.loop.run_until_complete(self.pc.close())
+            self.loop.close()
 
     async def connect(self):
         @self.pc.on("datachannel")
@@ -74,18 +87,22 @@ class WebRTCClient:
             self._setup_channel_events()
 
         session = aiohttp.ClientSession()
-        ws_url = f"{SIGNALING_URL}{self.backend_peer_id}"
+        ws_url = f"{SIGNALING_URL}{self.peer_id}"
         
-        async with session.ws_connect(ws_url) as ws:
-            logger.info(f"Connected to custom signaling server at {ws_url}")
-            
-            # Wait for an offer from the frontend
-            async for msg in ws:
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    await self.handle_signaling(ws, json.loads(msg.data))
-                elif msg.type == aiohttp.WSMsgType.ERROR:
-                    break
-        await session.close()
+        try:
+            async with session.ws_connect(ws_url) as ws:
+                logger.info(f"Connected to custom signaling server at {ws_url}")
+                
+                # Wait for an offer from the frontend
+                async for msg in ws:
+                    if msg.type == aiohttp.WSMsgType.TEXT:
+                        await self.handle_signaling(ws, json.loads(msg.data))
+                    elif msg.type == aiohttp.WSMsgType.ERROR:
+                        break
+        except Exception as e:
+            logger.error(f"Signaling connection failed: {e}")
+        finally:
+            await session.close()
 
     async def handle_signaling(self, ws, message):
         msg_type = message.get('type')
@@ -114,27 +131,41 @@ class WebRTCClient:
         def on_message(message):
             try:
                 data = json.loads(message)
+                logger.info(f"Received message from frontend: {data}")
                 self.result_queue.put(data)
             except Exception as e:
                 logger.warning(f"Failed to process message: {e}")
 
         @self.data_channel.on("open")
         def on_open():
-            logger.info("Data channel is open.")
-            self.result_queue.put({"type": "connection_ready"})
-            self.loop.create_task(self._action_sender())
+            logger.info("Data channel 'on(open)' event fired.")
+            # The action sender is now started from here OR from the readyState check below
+            if self.loop and not self.loop.is_closed():
+                self.loop.create_task(self._action_sender())
+
+        # Check the state immediately in case the 'open' event was missed (race condition)
+        if self.data_channel.readyState == "open":
+            logger.info("Data channel already open. Starting action sender immediately.")
+            if self.loop and not self.loop.is_closed():
+                self.loop.create_task(self._action_sender())
 
     async def _action_sender(self):
         while self.data_channel and self.data_channel.readyState == "open":
             try:
-                action = await self.loop.run_in_executor(None, self.action_queue.get, 0.1)
+                action = self.action_queue.get_nowait() # Non-blocking get
+
+                if action.get("type") == "close":
+                    break
+                logger.info(f"Sending action to frontend: {action}")
                 self.data_channel.send(json.dumps(action))
             except queue.Empty:
+                # If the queue is empty, don't just spin. Wait a little.
+                await asyncio.sleep(0.01)
                 continue
             except Exception as e:
                 logger.error(f"Error in action sender: {e}")
                 break
 
     def close(self):
-        if self.loop:
-            self.loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.pc.close()))
+        if self.loop and self.loop.is_running():
+            self.loop.stop()
