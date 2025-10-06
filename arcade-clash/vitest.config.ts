@@ -8,8 +8,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom', // or 'node' if no DOM interaction is needed
     globals: true,
-    setupFiles: [], // if you have global setup files
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'src/poc_tests/**/*.{test,spec}.{ts,tsx}'],
+    setupFiles: ['./setupTests.ts'], // if you have global setup files
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'src/poc_tests/**/*.{test,spec}.{ts,tsx}', 'components/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
     coverage: {
       provider: 'v8',

@@ -96,12 +96,16 @@ const RLAgentController: React.FC<RLAgentControllerProps> = ({ backendPeerId, ga
           const observation = engine.getObservationForAgent();
           const reward = 0; // TODO: Implement reward calculation
           const done = false; // TODO: Implement done condition check
+          const lastInputActions = engine.getLastInputActions();
 
           const response: FrontendMessage = {
             type: 'step_result',
             observation,
             reward,
             done,
+            p1_action_str: lastInputActions.p1Action,
+            p2_action_str: lastInputActions.p2Action,
+            current_frame: engine.getGameState().frame,
           };
           dc.send(JSON.stringify(response));
           console.log("RLAgentController: Sent 'step_result'.");

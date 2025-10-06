@@ -1,31 +1,44 @@
-import pytest
 import pygame
-from src.player import Player
+import pytest
+
+from src.constants import (ATTACK_DURATION, FPS, GRAVITY, INITIAL_HEALTH,
+                           JUMP_VELOCITY, PLAYER_HEIGHT, PLAYER_SPEED,
+                           PLAYER_WIDTH, PUNCH_COOLDOWN, PUNCH_DAMAGE,
+                           SCREEN_HEIGHT, SCREEN_WIDTH)
 from src.hitbox import Hitbox
-from src.constants import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT,
-    PLAYER_SPEED, JUMP_VELOCITY, GRAVITY, INITIAL_HEALTH,
-    PUNCH_DAMAGE, ATTACK_DURATION, PUNCH_COOLDOWN, FPS
-)
+from src.player import Player
 
 # Pygame initialization is now handled by conftest.py fixture
+
 
 @pytest.fixture
 def default_player():
     pygame.init()
     pygame.font.init()
-    player = Player(100, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, (0, 0, 255), 1)
+    player = Player(
+        100, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, (0, 0, 255), 1
+    )
     yield player
     pygame.font.quit()
     pygame.quit()
 
+
 @pytest.fixture
 def opponent_player():
-    return Player(SCREEN_WIDTH - 100 - PLAYER_WIDTH, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, (255, 0, 0), -1)
+    return Player(
+        SCREEN_WIDTH - 100 - PLAYER_WIDTH,
+        SCREEN_HEIGHT - PLAYER_HEIGHT,
+        PLAYER_WIDTH,
+        PLAYER_HEIGHT,
+        (255, 0, 0),
+        -1,
+    )
+
 
 @pytest.fixture
 def default_hitbox():
     return Hitbox(0, 0, 20, 20, damage=10)
+
 
 class TestPlayer:
     def test_initialization(self, default_player):
@@ -37,11 +50,11 @@ class TestPlayer:
         assert not default_player.is_guarding
 
     def test_move(self, default_player):
-        default_player.move(1) # Move right
+        default_player.move(1)  # Move right
         assert default_player.vel_x == PLAYER_SPEED
         assert default_player.facing == 1
 
-        default_player.move(-1) # Move left
+        default_player.move(-1)  # Move left
         assert default_player.vel_x == -PLAYER_SPEED
         assert default_player.facing == -1
 
@@ -67,7 +80,7 @@ class TestPlayer:
         initial_health = default_player.health
         default_player.guard()
         default_player.take_damage(10)
-        assert default_player.health == initial_health - (10 // 2) # Half damage
+        assert default_player.health == initial_health - (10 // 2)  # Half damage
         assert default_player.state == "guard_hit"
 
     def test_update_gravity(self, default_player, opponent_player):
@@ -75,18 +88,21 @@ class TestPlayer:
         default_player.rect.y = SCREEN_HEIGHT - PLAYER_HEIGHT - 10
         initial_y = default_player.rect.y
         default_player.is_jumping = True
-        default_player.vel_y = 0 # Reset vel_y for consistent gravity test
-        default_player.update(1/FPS, opponent_player) # Simulate one frame
-        assert default_player.vel_y > 0 # Gravity should increase vel_y
-        assert default_player.rect.y > initial_y # Player should move down
+        default_player.vel_y = 0  # Reset vel_y for consistent gravity test
+        default_player.update(1 / FPS, opponent_player)  # Simulate one frame
+        assert default_player.vel_y > 0  # Gravity should increase vel_y
+        assert default_player.rect.y > initial_y  # Player should move down
 
     def test_update_attack_timer(self, default_player, opponent_player):
         default_player.attack()
         assert default_player.is_attacking
-        default_player.update(ATTACK_DURATION + 0.1, opponent_player) # Pass attack duration
+        default_player.update(
+            ATTACK_DURATION + 0.1, opponent_player
+        )  # Pass attack duration
         assert not default_player.is_attacking
         assert not default_player.attack_hitbox.active
         assert default_player.state == "idle"
+
 
 class TestHitbox:
     def test_initialization(self, default_hitbox):
@@ -99,11 +115,11 @@ class TestHitbox:
 
     def test_update_position(self, default_hitbox):
         parent_rect = pygame.Rect(100, 100, 50, 100)
-        default_hitbox.update_position(parent_rect, 10, 20, 1) # Facing right
+        default_hitbox.update_position(parent_rect, 10, 20, 1)  # Facing right
         assert default_hitbox.rect.x == 110
         assert default_hitbox.rect.y == 120
 
-        default_hitbox.update_position(parent_rect, 10, 20, -1) # Facing left
+        default_hitbox.update_position(parent_rect, 10, 20, -1)  # Facing left
         # parent_rect.x + parent_rect.width - offset_x - self.rect.width
         # 100 + 50 - 10 - 20 = 120
         assert default_hitbox.rect.x == 120
@@ -111,7 +127,7 @@ class TestHitbox:
 
     def test_is_colliding(self, default_hitbox):
         other_hitbox = Hitbox(10, 10, 20, 20)
-        
+
         # No collision if not active
         assert not default_hitbox.is_colliding(other_hitbox)
 

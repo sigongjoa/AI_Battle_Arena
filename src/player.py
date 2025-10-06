@@ -1,12 +1,14 @@
+from typing import Tuple
+
 import pygame
-from typing import Tuple, Any
-from src.constants import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT,
-    PLAYER_SPEED, JUMP_VELOCITY, GRAVITY, INITIAL_HEALTH,
-    PUNCH_DAMAGE, ATTACK_DURATION, PUNCH_COOLDOWN, HIT_STUN_DURATION,
-    RED, GREEN, BLUE, YELLOW, BLACK, GRAY
-)
+
+from src.constants import (ATTACK_DURATION, BLACK, BLUE, GRAVITY, GRAY, GREEN,
+                           HIT_STUN_DURATION, INITIAL_HEALTH, JUMP_VELOCITY,
+                           PLAYER_HEIGHT, PLAYER_SPEED, PLAYER_WIDTH,
+                           PUNCH_COOLDOWN, PUNCH_DAMAGE, RED, SCREEN_HEIGHT,
+                           SCREEN_WIDTH, YELLOW)
 from src.hitbox import Hitbox
+
 
 class Player:
     """
@@ -29,7 +31,15 @@ class Player:
         punch_cooldown_timer (float): 펀치 쿨다운 타이머.
     """
 
-    def __init__(self, x: int, y: int, width: int, height: int, color: Tuple[int, int, int], facing: int):
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        color: Tuple[int, int, int],
+        facing: int,
+    ):
         """
         Player 객체를 초기화합니다.
 
@@ -56,16 +66,20 @@ class Player:
 
         # Hitboxes
         self.hurtbox: Hitbox = Hitbox(x, y, width, height)
-        self.hurtbox.active = True # Hurtbox should always be active for collision detection
+        self.hurtbox.active = (
+            True  # Hurtbox should always be active for collision detection
+        )
         # Attack hitbox (initially inactive and positioned relative to player)
-        self.attack_hitbox: Hitbox = Hitbox(0, 0, width // 1.5, height // 4, damage=PUNCH_DAMAGE)
+        self.attack_hitbox: Hitbox = Hitbox(
+            0, 0, width // 1.5, height // 4, damage=PUNCH_DAMAGE
+        )
         self.attack_hitbox.active = False
 
         self.attack_timer: float = 0.0
         self.punch_cooldown_timer: float = 0.0
         self.hit_stun_timer: float = 0.0
         self.hit_text_timer: float = 0.0
-        self.font = pygame.font.Font(None, 36) # Increased font size
+        self.font = pygame.font.Font(None, 36)  # Increased font size
 
     def move(self, direction: int) -> None:
         """
@@ -77,7 +91,9 @@ class Player:
         if not self.is_attacking and not self.is_guarding:
             self.vel_x = direction * PLAYER_SPEED
             self.facing = direction
-            print(f"[Player.move] Player {self.color} moving {direction}. vel_x={self.vel_x}")
+            print(
+                f"[Player.move] Player {self.color} moving {direction}. vel_x={self.vel_x}"
+            )
 
     def jump(self) -> None:
         """
@@ -98,7 +114,9 @@ class Player:
             self.attack_hitbox.active = True
             self.attack_timer = ATTACK_DURATION
             self.punch_cooldown_timer = PUNCH_COOLDOWN
-            print(f"[Player.attack] Player {self.color} started attack. is_attacking={self.is_attacking}, hitbox_active={self.attack_hitbox.active}")
+            print(
+                f"[Player.attack] Player {self.color} started attack. is_attacking={self.is_attacking}, hitbox_active={self.attack_hitbox.active}"
+            )
 
     def guard(self) -> None:
         """
@@ -120,18 +138,22 @@ class Player:
         if self.is_guarding:
             self.health -= damage // 2  # Half damage when guarding
             self.state = "guard_hit"
-            print(f"[Player.take_damage] Player {self.color} guarded, took {damage // 2} damage. Health: {initial_health} -> {self.health}")
+            print(
+                f"[Player.take_damage] Player {self.color} guarded, took {damage // 2} damage. Health: {initial_health} -> {self.health}"
+            )
         else:
             self.health -= damage
             self.state = "hit"
-            print(f"[Player.take_damage] Player {self.color} took {damage} damage. Health: {initial_health} -> {self.health}")
+            print(
+                f"[Player.take_damage] Player {self.color} took {damage} damage. Health: {initial_health} -> {self.health}"
+            )
         if self.health < 0:
             self.health = 0
         self.hit_stun_timer = HIT_STUN_DURATION
-        self.hit_text_timer = HIT_STUN_DURATION * 2 # Display HIT! for longer
+        self.hit_text_timer = HIT_STUN_DURATION * 2  # Display HIT! for longer
         # print(f"Player {self.color} took {damage} damage. Hit text timer set to {self.hit_text_timer}") # Original print
 
-    def update(self, dt: float, opponent: 'Player') -> None:
+    def update(self, dt: float, opponent: "Player") -> None:
         """
         캐릭터의 물리 및 상태를 업데이트합니다.
 
@@ -139,12 +161,14 @@ class Player:
             dt (float): 마지막 프레임 이후 경과 시간 (델타 타임).
             opponent (Player): 상대방 캐릭터 객체 (충돌 감지용).
         """
-        print(f"[Player.update] Player {self.color} state={self.state}, is_attacking={self.is_attacking}, is_guarding={self.is_guarding}, hit_stun_timer={self.hit_stun_timer:.2f}")
+        print(
+            f"[Player.update] Player {self.color} state={self.state}, is_attacking={self.is_attacking}, is_guarding={self.is_guarding}, hit_stun_timer={self.hit_stun_timer:.2f}"
+        )
         # Update hit stun timer
         if self.hit_stun_timer > 0:
             self.hit_stun_timer -= dt
             if self.hit_stun_timer <= 0:
-                self.state = "idle" # Exit hit stun
+                self.state = "idle"  # Exit hit stun
                 print(f"[Player.update] Player {self.color} exited hit stun.")
 
         # Update hit text timer
@@ -158,7 +182,7 @@ class Player:
             self.is_attacking = False
             self.attack_hitbox.active = False
             self.is_guarding = False
-            return # Skip other updates if in hit stun
+            return  # Skip other updates if in hit stun
 
         # Apply gravity
         # print(f"Before gravity: vel_y={self.vel_y}, _pos_y={self._pos_y}, rect.y={self.rect.y}") # Original print
@@ -200,13 +224,21 @@ class Player:
                 self.attack_hitbox.active = False
                 if self.state == "attack":
                     self.state = "idle"
-                print(f"[Player.update] Player {self.color} attack ended. is_attacking={self.is_attacking}, hitbox_active={self.attack_hitbox.active}")
+                print(
+                    f"[Player.update] Player {self.color} attack ended. is_attacking={self.is_attacking}, hitbox_active={self.attack_hitbox.active}"
+                )
             else:
                 # Position attack hitbox relative to player and facing direction
-                offset_x = self.rect.width if self.facing == 1 else -self.attack_hitbox.rect.width
-                self.attack_hitbox.update_position(self.rect, offset_x, self.rect.height // 4, self.facing)
+                offset_x = (
+                    self.rect.width
+                    if self.facing == 1
+                    else -self.attack_hitbox.rect.width
+                )
+                self.attack_hitbox.update_position(
+                    self.rect, offset_x, self.rect.height // 4, self.facing
+                )
                 # print(f"Player {self.color} update: Attack ongoing. is_attacking={self.is_attacking}, hitbox_active={self.attack_hitbox.active}") # Original print
-        
+
         # Update punch cooldown
         if self.punch_cooldown_timer > 0:
             self.punch_cooldown_timer -= dt
@@ -219,10 +251,14 @@ class Player:
         elif self.state == "hit" or self.state == "guard_hit":
             # Simple hit stun for now, transition back to idle after a short delay
             # In a real game, this would involve animation states and recovery frames
-            pass # Handled by external logic or animation system
-        elif not self.is_attacking and not self.is_jumping and not self.is_guarding and self.state not in ["hit", "guard_hit"]:
+            pass  # Handled by external logic or animation system
+        elif (
+            not self.is_attacking
+            and not self.is_jumping
+            and not self.is_guarding
+            and self.state not in ["hit", "guard_hit"]
+        ):
             self.state = "idle"
-
 
     def draw(self, screen: pygame.Surface) -> None:
         """
@@ -234,11 +270,11 @@ class Player:
         # Draw player body
         current_color = self.color
         if self.is_attacking:
-            current_color = YELLOW # Attack color
+            current_color = YELLOW  # Attack color
         elif self.is_guarding:
-            current_color = GRAY # Guard color
+            current_color = GRAY  # Guard color
         elif self.state == "hit" or self.state == "guard_hit":
-            current_color = RED # Hit color
+            current_color = RED  # Hit color
 
         pygame.draw.rect(screen, current_color, self.rect)
 
@@ -251,21 +287,39 @@ class Player:
 
         # Indicate facing direction
         triangle_points = []
-        if self.facing == 1: # Facing right
+        if self.facing == 1:  # Facing right
             triangle_points = [
-                (self.rect.centerx + self.rect.width // 4, self.rect.centery - self.rect.height // 4),
+                (
+                    self.rect.centerx + self.rect.width // 4,
+                    self.rect.centery - self.rect.height // 4,
+                ),
                 (self.rect.centerx + self.rect.width // 2, self.rect.centery),
-                (self.rect.centerx + self.rect.width // 4, self.rect.centery + self.rect.height // 4),
+                (
+                    self.rect.centerx + self.rect.width // 4,
+                    self.rect.centery + self.rect.height // 4,
+                ),
             ]
-        else: # Facing left
+        else:  # Facing left
             triangle_points = [
-                (self.rect.centerx - self.rect.width // 4, self.rect.centery - self.rect.height // 4),
+                (
+                    self.rect.centerx - self.rect.width // 4,
+                    self.rect.centery - self.rect.height // 4,
+                ),
                 (self.rect.centerx - self.rect.width // 2, self.rect.centery),
-                (self.rect.centerx - self.rect.width // 4, self.rect.centery + self.rect.height // 4),
+                (
+                    self.rect.centerx - self.rect.width // 4,
+                    self.rect.centery + self.rect.height // 4,
+                ),
             ]
         pygame.draw.polygon(screen, BLACK, triangle_points)
 
         # Draw 'HIT!' text if hit_text_timer is active
         if self.hit_text_timer > 0:
             hit_text_surface = self.font.render("HIT!", True, BLACK)
-            screen.blit(hit_text_surface, (self.rect.centerx - hit_text_surface.get_width() // 2, self.rect.y - 30))
+            screen.blit(
+                hit_text_surface,
+                (
+                    self.rect.centerx - hit_text_surface.get_width() // 2,
+                    self.rect.y - 30,
+                ),
+            )

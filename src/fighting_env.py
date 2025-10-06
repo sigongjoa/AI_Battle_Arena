@@ -3,45 +3,57 @@ import numpy as np
 import queue
 import threading
 import logging
-import asyncio
 
 from src.webrtc_client import WebRTCClient
+from src.rhythm_analyzer import RhythmAnalyzer
 
 # Basic logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class FightingEnv(gym.Env):
     """
     A Gymnasium environment that communicates with a browser-based game
     client via WebRTC.
     """
+
     metadata = {"render_modes": ["human"], "render_fps": 60}
 
     def __init__(self, backend_peer_id: str, render_mode=None, test_mode: bool = False):
         super().__init__()
         self.test_mode = test_mode
 
+        # Initialize RhythmAnalyzers for each player
+        # window_size: 600 actions (approx 10 seconds at 60 FPS)
+        # fps: 60
+        self.player1_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
+        self.player2_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
+
         # Define action and observation spaces based on the spec
         # Action: 0:Idle, 1:MoveFwd, 2:MoveBwd, 3:Jump, 4:Attack1, 5:Attack2
         self.action_space = gym.spaces.Discrete(6)
 
-        # Observation: [p1_x, p1_y, p1_hp, p1_state, p2_x, p2_y, p2_hp, p2_state]
-        # For simplicity, we assume 8 features now. This should match the frontend.
+        # Observation: [p1_x, p1_y, p1_hp, p1_state, p2_x, p2_y, p2_hp, p2_state] +
+        # [p1_rhythm_metrics(4), p2_rhythm_metrics(4)]
+        # The original 8 features from the game state are augmented with 8 features
+        # from the RhythmAnalyzer (4 for each player).
         self.observation_space = gym.spaces.Box(
-            low=0.0, high=1.0, shape=(8,), dtype=np.float32
+            low=0.0, high=1.0, shape=(16,), dtype=np.float32
         )
 
         self.action_queue = queue.Queue()
         self.result_queue = queue.Queue()
 
-        self.webrtc_client = WebRTCClient(self.action_queue, self.result_queue, test_mode=self.test_mode)
-        
+        self.webrtc_client = WebRTCClient(
+            self.action_queue, self.result_queue, test_mode=self.test_mode
+        )
+
         # Run the WebRTC client in a separate thread
         self.webrtc_thread = threading.Thread(
             target=self.webrtc_client.run,
             args=(backend_peer_id,),
-            daemon=True  # Daemon threads exit when the main program exits
+            daemon=True,  # Daemon threads exit when the main program exits
         )
         self.webrtc_thread.start()
 
@@ -58,7 +70,9 @@ class FightingEnv(gym.Env):
             if result.get("type") == "connection_ready":
                 logger.info("Frontend connection established successfully.")
             else:
-                raise ConnectionError("Received unexpected message while waiting for connection.")
+                raise ConnectionError(
+                    "Received unexpected message while waiting for connection."
+                )
         except queue.Empty:
             logger.error("Timeout: Frontend did not connect within 60 seconds.")
             raise ConnectionAbortedError("Frontend connection timed out.")
@@ -67,43 +81,79 @@ class FightingEnv(gym.Env):
         logger.info("Putting 'action' on action queue.")
         self.action_queue.put({"type": "action", "action": int(action)})
         try:
-            result = self.result_queue.get(timeout=10) # 10-second timeout for step
-            
+            result = self.result_queue.get(timeout=10)  # 10-second timeout for step
+
             if result.get("type") != "step_result":
                 raise ConnectionError("Unexpected message type received for step.")
 
-            obs = np.array(result["observation"], dtype=np.float32)
+            base_obs = np.array(result["observation"], dtype=np.float32)
             reward = result["reward"]
             terminated = result["done"]
-            truncated = False # Not used in this environment
+            truncated = False  # Not used in this environment
             info = {}
+
+            # Extract actions and current frame from the result
+            p1_action_str = result.get("p1_action_str")
+            p2_action_str = result.get("p2_action_str")
+            current_frame = result.get("current_frame")
+
+            if p1_action_str and current_frame is not None:
+                self.player1_rhythm_analyzer.add_action(p1_action_str, current_frame)
+            if p2_action_str and current_frame is not None:
+                self.player2_rhythm_analyzer.add_action(p2_action_str, current_frame)
+
+            # Get rhythm feature vectors
+            p1_rhythm_vec = self.player1_rhythm_analyzer.get_feature_vector()
+            p2_rhythm_vec = self.player2_rhythm_analyzer.get_feature_vector()
+
+            # Concatenate rhythm vectors with base observation
+            obs = np.concatenate((base_obs, p1_rhythm_vec, p2_rhythm_vec))
 
             return obs, reward, terminated, truncated, info
 
         except queue.Empty:
             logger.error("Timeout: Did not receive step_result from frontend in time.")
             # On timeout, we treat it as a terminal condition
-            return np.zeros(self.observation_space.shape, dtype=np.float32), 0, True, False, {"timeout": True}
+            return (
+                np.zeros(self.observation_space.shape, dtype=np.float32),
+                0,
+                True,
+                False,
+                {"timeout": True},
+            )
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        
+
+        # Re-initialize RhythmAnalyzers on reset
+        self.player1_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
+        self.player2_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
+
         logger.info("Putting 'reset' on action queue.")
         self.action_queue.put({"type": "reset"})
         try:
-            result = self.result_queue.get(timeout=10) # 10-second timeout for reset
+            result = self.result_queue.get(timeout=10)  # 10-second timeout for reset
 
             if result.get("type") != "reset_result":
                 raise ConnectionError("Unexpected message type received for reset.")
 
-            obs = np.array(result["observation"], dtype=np.float32)
+            base_obs = np.array(result["observation"], dtype=np.float32)
             info = {}
-            
+
+            # Get rhythm feature vectors
+            p1_rhythm_vec = self.player1_rhythm_analyzer.get_feature_vector()
+            p2_rhythm_vec = self.player2_rhythm_analyzer.get_feature_vector()
+
+            # Concatenate rhythm vectors with base observation
+            obs = np.concatenate((base_obs, p1_rhythm_vec, p2_rhythm_vec))
+
             return obs, info
 
         except queue.Empty:
             logger.error("Timeout: Did not receive reset_result from frontend in time.")
-            return np.zeros(self.observation_space.shape, dtype=np.float32), {"timeout": True}
+            return np.zeros(self.observation_space.shape, dtype=np.float32), {
+                "timeout": True
+            }
 
     def render(self):
         """
@@ -120,8 +170,12 @@ class FightingEnv(gym.Env):
         self.action_queue.put({"type": "close"})
 
         if self.webrtc_thread and self.webrtc_thread.is_alive():
-            if self.webrtc_client and self.webrtc_client.loop and self.webrtc_client.loop.is_running():
+            if (
+                self.webrtc_client
+                and self.webrtc_client.loop
+                and self.webrtc_client.loop.is_running()
+            ):
                 self.webrtc_client.loop.call_soon_threadsafe(self.webrtc_client.close)
             self.webrtc_thread.join(timeout=5)
-        
+
         logger.info("FightingEnv closed.")

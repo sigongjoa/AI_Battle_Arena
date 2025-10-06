@@ -1,14 +1,15 @@
+from typing import Tuple
+
 import pygame
-from typing import Tuple, Any
+from src.collision_manager import CollisionManager
 from src.constants import (
-    SCREEN_WIDTH, SCREEN_HEIGHT, CAPTION, FPS, WHITE, BLACK, RED, BLUE, GREEN,
-    PLAYER_WIDTH, PLAYER_HEIGHT, INITIAL_HEALTH,
-    HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT, HEALTH_BAR_MARGIN
+    BLACK, BLUE, CAPTION, FPS, GREEN, HEALTH_BAR_HEIGHT,
+    HEALTH_BAR_MARGIN, HEALTH_BAR_WIDTH, INITIAL_HEALTH,
+    PLAYER_HEIGHT, PLAYER_WIDTH, RED, SCREEN_HEIGHT,
+    SCREEN_WIDTH, WHITE
 )
 from src.player import Player
-from src.collision_manager import CollisionManager
-from src.ai_controller import AIController
-from src.interfaces import get_game_state, apply_ai_action
+
 
 class Game:
     """
@@ -28,20 +29,31 @@ class Game:
         self.headless = headless
         if not self.headless:
             pygame.init()
-            pygame.font.init() # Initialize font module
+            pygame.font.init()  # Initialize font module
             self.screen: pygame.Surface = pygame.display.set_mode((width, height))
             pygame.display.set_caption(caption)
         else:
             # Initialize Pygame modules that don't require a display
             pygame.init()
-            pygame.font.init() # Initialize font module
-            pygame.display.set_mode((1, 1), pygame.HIDDEN) # Create a minimal hidden display
+            pygame.font.init()  # Initialize font module
+            pygame.display.set_mode(
+                (1, 1), pygame.HIDDEN
+            )  # Create a minimal hidden display
 
         self.clock: pygame.time.Clock = pygame.time.Clock()
         self.running: bool = True
 
-        self.player1: Player = Player(100, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, BLUE, 1)
-        self.player2: Player = Player(SCREEN_WIDTH - 100 - PLAYER_WIDTH, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, RED, -1)
+        self.player1: Player = Player(
+            100, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, BLUE, 1
+        )
+        self.player2: Player = Player(
+            SCREEN_WIDTH - 100 - PLAYER_WIDTH,
+            SCREEN_HEIGHT - PLAYER_HEIGHT,
+            PLAYER_WIDTH,
+            PLAYER_HEIGHT,
+            RED,
+            -1,
+        )
 
         self.collision_manager: CollisionManager = CollisionManager()
         self.frame_count: int = 0
@@ -53,11 +65,22 @@ class Game:
         """
         게임의 상태를 초기화합니다. Pygame 자체는 종료하지 않습니다.
         """
-        self.player1 = Player(100, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, BLUE, 1)
-        self.player2 = Player(SCREEN_WIDTH - 100 - PLAYER_WIDTH, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, RED, -1)
-        self.collision_manager = CollisionManager() # Re-initialize collision manager if it holds state
+        self.player1 = Player(
+            100, SCREEN_HEIGHT - PLAYER_HEIGHT, PLAYER_WIDTH, PLAYER_HEIGHT, BLUE, 1
+        )
+        self.player2 = Player(
+            SCREEN_WIDTH - 100 - PLAYER_WIDTH,
+            SCREEN_HEIGHT - PLAYER_HEIGHT,
+            PLAYER_WIDTH,
+            PLAYER_HEIGHT,
+            RED,
+            -1,
+        )
+        self.collision_manager = (
+            CollisionManager()
+        )  # Re-initialize collision manager if it holds state
         # self.ai_controller = AIController(self.player2, self.player1) # Disabled for multi-agent control
-        self.running = True # Ensure game loop can run
+        self.running = True  # Ensure game loop can run
 
     def run(self) -> None:
         """
@@ -120,7 +143,7 @@ class Game:
             self.timer_accumulator -= 1.0
             if self.round_timer < 0:
                 self.round_timer = 0
-                self.running = False # Game over on time out
+                self.running = False  # Game over on time out
         self.player1.update(dt, self.player2)
         self.player2.update(dt, self.player1)
 
@@ -132,10 +155,14 @@ class Game:
 
         # Check for game over condition
         if self.player1.health <= 0 or self.player2.health <= 0:
-            print(f"[Game._update] Game Over! Player1 Health: {self.player1.health}, Player2 Health: {self.player2.health}")
+            print(
+                f"[Game._update] Game Over! Player1 Health: {self.player1.health}, Player2 Health: {self.player2.health}"
+            )
             self.running = False
 
-    def _draw_health_bar(self, player: Player, x: int, y: int, screen: pygame.Surface) -> None:
+    def _draw_health_bar(
+        self, player: Player, x: int, y: int, screen: pygame.Surface
+    ) -> None:
         """
         Draws a health bar for a given player at a specified position.
 
@@ -153,7 +180,9 @@ class Game:
         pygame.draw.rect(screen, GREEN, (x, y, current_health_width, HEALTH_BAR_HEIGHT))
 
         # Border
-        pygame.draw.rect(screen, BLACK, (x, y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT), 2) # 2 pixels thick border
+        pygame.draw.rect(
+            screen, BLACK, (x, y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT), 2
+        )  # 2 pixels thick border
 
     def _draw(self) -> None:
         """
@@ -165,8 +194,15 @@ class Game:
         self.player2.draw(self.screen)
 
         # Draw top health bars
-        self._draw_health_bar(self.player1, HEALTH_BAR_MARGIN, HEALTH_BAR_MARGIN, self.screen)
-        self._draw_health_bar(self.player2, SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN, HEALTH_BAR_MARGIN, self.screen)
+        self._draw_health_bar(
+            self.player1, HEALTH_BAR_MARGIN, HEALTH_BAR_MARGIN, self.screen
+        )
+        self._draw_health_bar(
+            self.player2,
+            SCREEN_WIDTH - HEALTH_BAR_WIDTH - HEALTH_BAR_MARGIN,
+            HEALTH_BAR_MARGIN,
+            self.screen,
+        )
 
         pygame.display.flip()  # Update the full display surface
 

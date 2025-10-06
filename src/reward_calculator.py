@@ -1,4 +1,5 @@
-from typing import Dict, Any
+from typing import Any, Dict
+
 
 class RewardCalculator:
     """
@@ -6,14 +7,16 @@ class RewardCalculator:
     다양한 보상 요소를 통합하여 최종 보상을 산출합니다.
     """
 
-    def __init__(self,
-                 damage_reward_scale: float = 0.1,
-                 damage_penalty_scale: float = 0.1,
-                 win_reward: float = 100.0,
-                 loss_penalty: float = -100.0,
-                 distance_closer_reward_scale: float = 0.001,
-                 distance_further_penalty_scale: float = 0.0005,
-                 idle_penalty: float = 0.0): # Changed to 0.0 as per previous step's logic
+    def __init__(
+        self,
+        damage_reward_scale: float = 0.1,
+        damage_penalty_scale: float = 0.1,
+        win_reward: float = 100.0,
+        loss_penalty: float = -100.0,
+        distance_closer_reward_scale: float = 0.001,
+        distance_further_penalty_scale: float = 0.0005,
+        idle_penalty: float = 0.0,
+    ):  # Changed to 0.0 as per previous step's logic
         self.damage_reward_scale = damage_reward_scale
         self.damage_penalty_scale = damage_penalty_scale
         self.win_reward = win_reward
@@ -22,14 +25,16 @@ class RewardCalculator:
         self.distance_further_penalty_scale = distance_further_penalty_scale
         self.idle_penalty = idle_penalty
 
-    def calculate_reward(self,
-                         player_state: Dict[str, Any],
-                         opponent_state: Dict[str, Any],
-                         game_info: Dict[str, Any],
-                         action: int, # Agent's action
-                         last_player_health: int,
-                         last_opponent_health: int,
-                         last_distance: float) -> float:
+    def calculate_reward(
+        self,
+        player_state: Dict[str, Any],
+        opponent_state: Dict[str, Any],
+        game_info: Dict[str, Any],
+        action: int,  # Agent's action
+        last_player_health: int,
+        last_opponent_health: int,
+        last_distance: float,
+    ) -> float:
         """
         현재 게임 상태를 기반으로 보상을 계산하여 반환합니다.
         """
@@ -53,21 +58,25 @@ class RewardCalculator:
 
         # 3. Distance reward/penalty
         current_distance = abs(player_state["x"] - opponent_state["x"])
-        distance_change = last_distance - current_distance # Positive if distance decreased
+        distance_change = (
+            last_distance - current_distance
+        )  # Positive if distance decreased
 
-        if distance_change > 0: # Moving closer
+        if distance_change > 0:  # Moving closer
             reward += distance_change * self.distance_closer_reward_scale
-        elif distance_change < 0: # Moving further
+        elif distance_change < 0:  # Moving further
             reward -= abs(distance_change) * self.distance_further_penalty_scale
-        
+
         # 4. Idle penalty (if applicable)
-        if action == 0: # Assuming 0 is the idle action
+        if action == 0:  # Assuming 0 is the idle action
             reward += self.idle_penalty
 
         return reward
 
     # Internal reward components (can be used for more granular control if needed)
-    def _distance_reward(self, player_pos_x: float, opponent_pos_x: float, last_distance: float) -> float:
+    def _distance_reward(
+        self, player_pos_x: float, opponent_pos_x: float, last_distance: float
+    ) -> float:
         current_distance = abs(player_pos_x - opponent_pos_x)
         distance_change = last_distance - current_distance
         if distance_change > 0:
@@ -76,7 +85,9 @@ class RewardCalculator:
             return abs(distance_change) * self.distance_further_penalty_scale
         return 0.0
 
-    def _health_difference_reward(self, player_health: int, opponent_health: int) -> float:
+    def _health_difference_reward(
+        self, player_health: int, opponent_health: int
+    ) -> float:
         # This can be added later if needed, currently covered by damage dealt/taken
         # Example: reward += (player_health - opponent_health) * some_scale
         return 0.0

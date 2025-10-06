@@ -1,13 +1,14 @@
 # main.py
-import sys
-import os
-import uvicorn
 import json
+import os
+import sys
+
+import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 # Add project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend.api import routes as api_routes
 
@@ -28,12 +29,13 @@ app.add_middleware(
 # API 라우터 포함
 app.include_router(api_routes.router, prefix="/api")
 
+
 @app.websocket("/ws/{peer_id}")
 async def websocket_endpoint(websocket: WebSocket, peer_id: str):
     # Manually check the origin for WebSocket connections
     origin = websocket.headers.get("origin")
     if origin is not None and origin != "http://localhost:5174":
-        await websocket.close(code=1008) # Policy Violation
+        await websocket.close(code=1008)  # Policy Violation
         print(f"[Signaling] DENIED: Unauthorized origin: {origin}")
         return
 
@@ -44,20 +46,24 @@ async def websocket_endpoint(websocket: WebSocket, peer_id: str):
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
-            
+
             # Simple relay logic
             destination_peer_id = message.get("dst")
             if destination_peer_id and destination_peer_id in connected_peers:
                 # Add source peer_id to the message for reply
-                message['src'] = peer_id
-                await connected_peers[destination_peer_id].send_text(json.dumps(message))
+                message["src"] = peer_id
+                await connected_peers[destination_peer_id].send_text(
+                    json.dumps(message)
+                )
             else:
                 print(f"[Signaling] Destination peer {destination_peer_id} not found.")
 
     except WebSocketDisconnect:
         if peer_id in connected_peers:
             del connected_peers[peer_id]
-        print(f"[Signaling] Peer disconnected: {peer_id} (Total: {len(connected_peers)})\n")
+        print(
+            f"[Signaling] Peer disconnected: {peer_id} (Total: {len(connected_peers)})\n"
+        )
     except Exception as e:
         print(f"[Signaling] Error for peer {peer_id}: {e}")
         if peer_id in connected_peers:
@@ -67,6 +73,7 @@ async def websocket_endpoint(websocket: WebSocket, peer_id: str):
 @app.get("/")
 def read_root():
     return {"message": "AI Battle Arena Backend"}
+
 
 if __name__ == "__main__":
     print("Starting FastAPI server on port 8001...")

@@ -63,7 +63,8 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, localPlayerId, re
             initialState,
             FixedPoint.fromFloat(1 / 60),
             p1,
-            p2
+            p2,
+            p1 // aiPlayerId: The player controlled by the AI (p1 in RL mode)
         );
         setGameState(initialState);
     }, [isRLMode, localPlayerId, remotePlayerId]);

@@ -1,5 +1,7 @@
-from typing import Dict, Any
+from typing import Any, Dict
+
 from src.player import Player
+
 
 def get_game_state(player1: Player, player2: Player) -> Dict[str, Any]:
     """
@@ -25,7 +27,7 @@ def get_game_state(player1: Player, player2: Player) -> Dict[str, Any]:
             "is_jumping": player1.is_jumping,
             "is_attacking": player1.is_attacking,
             "is_guarding": player1.is_guarding,
-            "attack_hitbox_active": player1.attack_hitbox.active
+            "attack_hitbox_active": player1.attack_hitbox.active,
         },
         "player2": {
             "x": player2.rect.x,
@@ -38,11 +40,12 @@ def get_game_state(player1: Player, player2: Player) -> Dict[str, Any]:
             "is_jumping": player2.is_jumping,
             "is_attacking": player2.is_attacking,
             "is_guarding": player2.is_guarding,
-            "attack_hitbox_active": player2.attack_hitbox.active
+            "attack_hitbox_active": player2.attack_hitbox.active,
         },
-        "distance": abs(player1.rect.centerx - player2.rect.centerx)
+        "distance": abs(player1.rect.centerx - player2.rect.centerx),
     }
     return state
+
 
 def apply_ai_action(player: Player, action: str) -> None:
     """

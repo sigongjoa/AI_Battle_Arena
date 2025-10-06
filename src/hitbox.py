@@ -1,5 +1,5 @@
 import pygame
-from typing import Tuple
+
 
 class Hitbox:
     """
@@ -26,7 +26,9 @@ class Hitbox:
         self.damage: int = damage
         self.active: bool = False
 
-    def update_position(self, parent_rect: pygame.Rect, offset_x: int, offset_y: int, facing: int) -> None:
+    def update_position(
+        self, parent_rect: pygame.Rect, offset_x: int, offset_y: int, facing: int
+    ) -> None:
         """
         부모 객체(캐릭터)의 위치와 방향에 따라 히트박스 위치를 업데이트합니다.
 
@@ -42,7 +44,15 @@ class Hitbox:
             self.rect.x = parent_rect.x + parent_rect.width - offset_x - self.rect.width
         self.rect.y = parent_rect.y + offset_y
 
-    def is_colliding(self, other_hitbox: 'Hitbox') -> bool:
-        print(f"Hitbox.is_colliding: self.active={self.active}, other_hitbox.active={other_hitbox.active}")
-        print(f"Hitbox.is_colliding: self.rect={self.rect}, other_hitbox.rect={other_hitbox.rect}")
-        return self.active and other_hitbox.active and self.rect.colliderect(other_hitbox.rect)
+    def is_colliding(self, other_hitbox: "Hitbox") -> bool:
+        print(
+            f"Hitbox.is_colliding: self.active={self.active}, other_hitbox.active={other_hitbox.active}"
+        )
+        print(
+            f"Hitbox.is_colliding: self.rect={self.rect}, other_hitbox.rect={other_hitbox.rect}"
+        )
+        return (
+            self.active
+            and other_hitbox.active
+            and self.rect.colliderect(other_hitbox.rect)
+        )
