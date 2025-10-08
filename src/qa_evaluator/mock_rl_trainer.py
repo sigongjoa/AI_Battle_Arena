@@ -18,8 +18,18 @@ class MockRLTrainer:
         print(f"Description: {persona.description}")
         print(f"Using training parameters: {persona.training_params}")
         
+        # Simulate applying persona-specific configurations
+        if persona.action_masking_rules:
+            print(f"  Applying Action Masking Rules: {persona.action_masking_rules}")
+        if persona.custom_reward_function_config:
+            print(f"  Applying Custom Reward Function Config: {persona.custom_reward_function_config}")
+
         # Simulate environment creation
         # env = make_vec_env("FightingGameEnv-v0", n_envs=1) 
+        # if persona.action_masking_rules:
+        #     env = apply_action_masking(env, persona.action_masking_rules)
+        # if persona.custom_reward_function_config:
+        #     env = apply_custom_rewards(env, persona.custom_reward_function_config)
 
         # Simulate model creation and training
         # model = PPO("MlpPolicy", env, verbose=1, **persona.training_params)
@@ -27,7 +37,7 @@ class MockRLTrainer:
         # model.save(f"models/{persona.name.replace(' ', '_').lower()}_model")
 
         print(f"Simulating training for {total_timesteps} timesteps...")
-        time.sleep(2) # Simulate training time
+        time.sleep(1) # Reduced sleep for quicker demo
         print(f"Mock training for '{persona.name}' completed. Model saved to 'models/{persona.name.replace(' ', '_').lower()}_model.zip')")
         
         # Return a mock model path
@@ -37,3 +47,4 @@ if __name__ == '__main__':
     trainer = MockRLTrainer()
     trainer.train_persona("Pro-gamer AI", total_timesteps=50000)
     trainer.train_persona("Beginner AI")
+    trainer.train_persona("Troll AI") # Added Troll AI for demo

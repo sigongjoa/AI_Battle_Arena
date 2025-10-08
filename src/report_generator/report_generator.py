@@ -12,7 +12,7 @@ class ReportGenerator:
         self.report_template = self.template_env.get_template("report_template.md.jinja2")
         print("ReportGenerator initialized.")
 
-    def generate_report(self, session_id: str, output_dir="reports"):
+    def generate_report(self, session_id: str, persona_analysis_results: dict = None, output_dir="reports"):
         print(f"\n--- Generating Report for Session: {session_id} ---")
         os.makedirs(output_dir, exist_ok=True)
 
@@ -52,6 +52,7 @@ class ReportGenerator:
             immersion_metrics=immersion_metrics,
             qa_metrics_dict=qa_metrics_dict, # For easier access in hypothesis section
             immersion_metrics_dict=immersion_metrics_dict, # For easier access in hypothesis section
+            persona_analysis_results=persona_analysis_results, # Pass persona analysis results
             mock_video_briefing_path=mock_video_briefing_path,
             mock_log_snippet_human_error_path=mock_log_snippet_human_error_path,
             generation_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S')

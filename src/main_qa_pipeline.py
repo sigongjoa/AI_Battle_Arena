@@ -64,7 +64,7 @@ def run_full_qa_pipeline(num_simulations=2, num_comparisons=5):
 
     generated_reports = []
     for session_id in session_ids_for_reports:
-        report_path = report_generator.generate_report(session_id)
+        report_path = report_generator.generate_report(session_id, persona_analysis_results=analysis_results)
         if report_path:
             generated_reports.append(report_path)
     

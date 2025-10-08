@@ -136,7 +136,6 @@ def test_metric_extractor_conceptual(clean_db_manager, tmp_path):
     
     # Create a mock log file
     mock_session_id = "mock_extract_session"
-    print(f"DEBUG TEST: mock_session_id in test: {mock_session_id}") # Added debug print
     mock_log_filepath = tmp_path / f"session_20250101_000000_{mock_session_id}.jsonl.gz"
     with gzip.open(mock_log_filepath, 'wt', encoding='utf-8') as f:
         f.write(json.dumps({"event_type": "SESSION_START", "timestamp": time.time(), "session_id": mock_session_id}) + '\n')
