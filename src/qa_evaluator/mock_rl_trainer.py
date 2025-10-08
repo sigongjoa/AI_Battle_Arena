@@ -8,7 +8,7 @@ class MockRLTrainer:
     def __init__(self):
         print("MockRLTrainer initialized. (Stable-Baselines3 would be used here)")
 
-    def train_persona(self, persona_name: str, total_timesteps: int = 10000):
+    def train_persona(self, persona_name: str, total_timesteps: int = 10000, use_imitation_learning=False): # Added use_imitation_learning
         persona = PERSONAS.get(persona_name)
         if not persona:
             print(f"Error: Persona '{persona_name}' not found.")
@@ -18,6 +18,12 @@ class MockRLTrainer:
         print(f"Description: {persona.description}")
         print(f"Using training parameters: {persona.training_params}")
         
+        # Simulate pre-training with imitation learning
+        if use_imitation_learning:
+            print(f"  Simulating Imitation Learning pre-training for '{persona.name}'...")
+            time.sleep(1) # Simulate pre-training time
+            print(f"  Imitation Learning pre-training completed.")
+
         # Simulate applying persona-specific configurations
         if persona.action_masking_rules:
             print(f"  Applying Action Masking Rules: {persona.action_masking_rules}")
@@ -51,4 +57,5 @@ if __name__ == '__main__':
     trainer = MockRLTrainer()
     trainer.train_persona("Pro-gamer AI", total_timesteps=50000)
     trainer.train_persona("Beginner AI")
-    trainer.train_persona("Troll AI") # Added Troll AI for demo
+    trainer.train_persona("Troll AI")
+    trainer.train_persona("Out-fighter AI", use_imitation_learning=True) # Example with imitation learning # Added Troll AI for demo

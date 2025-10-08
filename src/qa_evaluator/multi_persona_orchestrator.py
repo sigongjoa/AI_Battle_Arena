@@ -50,6 +50,16 @@ class MultiPersonaOrchestrator:
                 }
                 print(f"    Applying simulation config based on {p1.name}...")
 
+                # Acknowledge Imitation Learning and Curiosity-Driven Exploration if configured
+                if p1.training_params.get('use_imitation_learning'):
+                    print(f"    {p1.name} is using Imitation Learning pre-training.")
+                if p1.training_params.get('use_curiosity_exploration'):
+                    print(f"    {p1.name} is using Curiosity-Driven Exploration.")
+                if p2.training_params.get('use_imitation_learning'):
+                    print(f"    {p2.name} is using Imitation Learning pre-training.")
+                if p2.training_params.get('use_curiosity_exploration'):
+                    print(f"    {p2.name} is using Curiosity-Driven Exploration.")
+
                 # Run mock simulation arena with persona config
                 print("    Running mock simulation arena...")
                 session_id = run_mock_simulation(num_frames=random.randint(30, 60), persona_config=persona_config_for_sim)

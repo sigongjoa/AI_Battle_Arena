@@ -24,11 +24,16 @@ def run_full_qa_pipeline(num_simulations=2, num_comparisons=5):
     pro_gamer_model_path = rl_trainer.train_persona("Pro-gamer AI", total_timesteps=50000)
     beginner_model_path = rl_trainer.train_persona("Beginner AI", total_timesteps=10000)
     pressure_model_path = rl_trainer.train_persona("Pressure AI", total_timesteps=20000)
+    troll_model_path = rl_trainer.train_persona("Troll AI", total_timesteps=15000) # Train Troll AI
+    out_fighter_model_path = rl_trainer.train_persona("Out-fighter AI", total_timesteps=25000, use_imitation_learning=True) # Train Out-fighter with IL
+    in_fighter_model_path = rl_trainer.train_persona("In-fighter AI", total_timesteps=25000)
+    slugger_model_path = rl_trainer.train_persona("Slugger AI", total_timesteps=20000)
     
     # Step 4.2 & 3: Multi-Persona Analysis & Metric Extraction
     print("\n--- Step 4.2 & 3: Multi-Persona Analysis & Metric Extraction ---")
     multi_persona_analyzer = MockMultiPersonaAnalyzer(db_manager)
-    personas_to_analyze = ["Beginner AI", "Pro-gamer AI", "Pressure AI"]
+    # Include all personas in the analysis
+    personas_to_analyze = ["Beginner AI", "Pro-gamer AI", "Pressure AI", "Troll AI", "Out-fighter AI", "In-fighter AI", "Slugger AI"]
     analysis_results = multi_persona_analyzer.analyze_personas(personas_to_analyze, num_simulations_per_pair=num_simulations)
 
     # Step 4.3: RLHF Framework (Mock)

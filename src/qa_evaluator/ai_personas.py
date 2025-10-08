@@ -44,10 +44,57 @@ PERSONAS = {
         name="Troll AI",
         description="Aims to annoy the opponent, avoid direct confrontation, or exploit game mechanics.",
         reward_weights={'opponent_frustration': 1.0, 'distance_to_opponent': 0.5, 'damage': -0.1, 'survival': 0.5, 'repeated_defense_induce': 1.0}, # Placeholder for frustration
-        training_params={'learning_rate': 0.0003, 'n_steps': 1024, 'gamma': 0.9},
+        training_params={'learning_rate': 0.0003, 'n_steps': 1024, 'gamma': 0.9, 'use_curiosity_exploration': True}, # Added Curiosity
         error_tolerance=0.05, # Low error to perform intentional trolling
         action_masking_rules={},
         custom_reward_function_config={'non_winning_objective': True} # Flag for custom reward logic
+    ),
+    # --- Phase 10 Boxing Personas ---
+    "Out-fighter AI": AIPersona(
+        name="Out-fighter AI",
+        description="Maintains long range, uses jabs for points, and evades attacks.",
+        reward_weights={
+            'distance_to_opponent': 0.5, # High reward for optimal jab range
+            'opponent_close_range': -0.3, # Penalty for opponent entering close range
+            'jab_hit': 1.0,
+            'powerful_attack_miss': -0.5,
+            'evade_success': 0.2,
+            'win': 1.0 # Still wants to win by points
+        },
+        training_params={'learning_rate': 0.0002, 'n_steps': 2048, 'gamma': 0.98},
+        error_tolerance=0.05, # Relatively low error for precision
+        action_masking_rules={'close_range_attacks': True}, # Discourage close range attacks
+        custom_reward_function_config={'distance_control': True}
+    ),
+    "In-fighter AI": AIPersona(
+        name="In-fighter AI",
+        description="Closes distance, evades attacks, and uses short, rapid combos.",
+        reward_weights={
+            'distance_to_opponent': -0.5, # High reward for close range
+            'close_range_attack_hit': 1.2,
+            'rapid_combo_hit': 0.7, # Bonus for rapid consecutive hits
+            'evade_success': 0.7, # High reward for ducking/weaving
+            'win': 1.0
+        },
+        training_params={'learning_rate': 0.0002, 'n_steps': 2048, 'gamma': 0.98},
+        error_tolerance=0.05, # Relatively low error for precision
+        action_masking_rules={'long_range_attacks': True}, # Discourage long range attacks
+        custom_reward_function_config={'close_range_pressure': True}
+    ),
+    "Slugger AI": AIPersona(
+        name="Slugger AI",
+        description="Focuses on powerful single hits, less on precision, and can take damage.",
+        reward_weights={
+            'light_attack_hit': 0.1,
+            'powerful_attack_hit': 5.0, # Very high reward for powerful hits
+            'counter_punch_success': 3.0,
+            'damage_taken': -0.1, # Lower penalty for taking damage
+            'win': 1.0
+        },
+        training_params={'learning_rate': 0.0003, 'n_steps': 1024, 'gamma': 0.95},
+        error_tolerance=0.1, # Higher error tolerance, less precision
+        action_masking_rules={'evasive_moves': True}, # Less emphasis on evasion
+        custom_reward_function_config={'one_hit_ko_potential': True}
     )
 }
 
