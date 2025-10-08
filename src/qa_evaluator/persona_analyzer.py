@@ -60,13 +60,17 @@ class PersonaAnalyzer:
                 avg_balance = df['qa_metric_value'].loc[df['qa_metric_name'] == 'BalanceScore'].mean()
                 avg_responsiveness = df['qa_metric_value'].loc[df['qa_metric_name'] == 'ResponsivenessScore'].mean()
                 avg_combo_rhythm = df['immersion_metric_value'].loc[df['immersion_metric_name'] == 'ComboRhythmScore'].mean()
+                
+                # Add FunScore to mock analysis
+                avg_fun_score = df['immersion_metric_value'].loc[df['immersion_metric_name'] == 'FunScore'].mean()
 
                 analysis_results[f"{p1_name}_vs_{p2_name}"] = {
                     "avg_stability": avg_stability if pd.notna(avg_stability) else random.uniform(0.8, 1.0),
                     "avg_balance": avg_balance if pd.notna(avg_balance) else random.uniform(0.7, 1.0),
                     "avg_responsiveness": avg_responsiveness if pd.notna(avg_responsiveness) else random.uniform(0.7, 1.0),
                     "avg_combo_rhythm": avg_combo_rhythm if pd.notna(avg_combo_rhythm) else random.uniform(0.6, 0.9),
-                    "conclusion": f"Mock analysis: {p1_name} showed slightly better {random.choice(['stability', 'balance', 'rhythm'])} against {p2_name}."
+                    "avg_fun_score": avg_fun_score if pd.notna(avg_fun_score) else random.uniform(0.5, 1.0), # Added FunScore
+                    "conclusion": f"Mock analysis: {p1_name} showed slightly better {random.choice(['stability', 'balance', 'rhythm', 'fun'])} against {p2_name}."
                 }
                 print(f"    Conclusion: {analysis_results[f'{p1_name}_vs_{p2_name}']['conclusion']}")
 

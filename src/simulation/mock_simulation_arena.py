@@ -5,13 +5,28 @@ from src.simulation.network_simulator import NetworkSimulator
 from src.log_collector.log_collector import LogCollector
 from src.utils.event_types import * # Import all event types
 
-def run_mock_simulation(num_frames=20):
+def run_mock_simulation(num_frames=20, persona_config=None): # Added persona_config
     print("--- Running Mock Simulation Arena ---")
+    
+    # Initialize HumanErrorLayer and NetworkSimulator
     human_error_layer = HumanErrorLayer()
     network_simulator = NetworkSimulator()
     log_collector = LogCollector() # Initialize LogCollector
 
     session_id = log_collector.start_session() # Start a new logging session
+
+    # Apply persona-specific configurations if provided
+    if persona_config:
+        print(f"\n--- Applying Persona Config for Simulation ---")
+        # Adjust HumanErrorLayer based on persona_config
+        if 'error_tolerance' in persona_config:
+            human_error_layer.mistake_probability = persona_config['error_tolerance']
+            human_error_layer.drop_probability = persona_config['error_tolerance'] / 2 # Example
+            print(f"  Adjusted Human Error Layer: Mistake Prob={{human_error_layer.mistake_probability}}, Drop Prob={{human_error_layer.drop_probability}}")
+        if 'action_masking_rules' in persona_config and persona_config['action_masking_rules']:
+            print(f"  Applying Action Masking Rules: {persona_config['action_masking_rules']}")
+        if 'custom_reward_function_config' in persona_config and persona_config['custom_reward_function_config']:
+            print(f"  Applying Custom Reward Function Config: {persona_config['custom_reward_function_config']}")
 
     print("\n--- Human Error Layer Config ---")
     print(f"Reaction Time Mean: {human_error_layer.reaction_time_mean} frames")
@@ -39,6 +54,13 @@ def run_mock_simulation(num_frames=20):
 
         # AI generates an action
         ai_action = actions_to_send[frame % len(actions_to_send)]
+        
+        # Apply action masking if configured for the persona
+        if persona_config and persona_config.get('action_masking_rules', {}).get('complex_moves'):
+            if ai_action in ["special", "jump"]: # Example of masked actions
+                ai_action = "block" # Replace with a simpler action
+                print(f"  Action masked: changed to {ai_action}")
+
         log_collector.log_event(ACTION_EVENT, {"ai_generated_action": ai_action})
         print(f"AI Generated Action: {ai_action}")
 
@@ -78,6 +100,10 @@ def run_mock_simulation(num_frames=20):
 
     log_collector.end_session() # End the logging session
     print("\n--- Mock Simulation Arena Finished ---")
+    return session_id # Return session_id for orchestrator to use
 
 if __name__ == '__main__':
-    run_mock_simulation()
+    # Example of running with a persona config
+    from src.qa_evaluator.ai_personas import PERSONAS
+    beginner_persona = PERSONAS["Beginner AI"]
+    run_mock_simulation(num_frames=30, persona_config={'error_tolerance': beginner_persona.error_tolerance, 'action_masking_rules': beginner_persona.action_masking_rules})

@@ -21,6 +21,9 @@
 {% for metric in immersion_metrics %}
 *   **{{ metric.metric_name }}:** {{ "%.2f" | format(metric.metric_value) }} (Frames: {{ metric.start_frame }} - {{ metric.end_frame }})
 {% endfor %}
+{% if immersion_metrics_dict.FunScore %}
+*   **FunScore:** {{ "%.2f" | format(immersion_metrics_dict.FunScore.metric_value) }}
+{% endif %}
 {% else %}
 *   No Immersion & Rhythm metrics available for this session.
 {% endif %}
@@ -31,6 +34,9 @@ Based on the analysis of session `{{ session_id }}`, the AI Evaluator proposes t
 *   **Hypothesis 1 (Stability):** The overall stability score of {{ "%.2f" | format(qa_metrics_dict['StabilityScore'].metric_value) }} suggests a generally stable session, but further investigation into specific `HUMAN_ERROR_INJECTED_EVENT`s is recommended.
 *   **Hypothesis 2 (Balance):** With a BalanceScore of {{ "%.2f" | format(qa_metrics_dict['BalanceScore'].metric_value) }}, there might be minor imbalances. A deeper dive into win rates against different AI personas is needed.
 *   **Hypothesis 3 (Immersion/Rhythm):** The ComboRhythmScore of {{ "%.2f" | format(immersion_metrics_dict['ComboRhythmScore'].metric_value) }} indicates a decent flow, but the TensionIndex of {{ "%.2f" | format(immersion_metrics_dict['TensionIndex'].metric_value) }} suggests opportunities to enhance dramatic moments.
+{% if immersion_metrics_dict.FunScore %}
+*   **Hypothesis 4 (FunScore):** The FunScore of {{ "%.2f" | format(immersion_metrics_dict.FunScore.metric_value) }} suggests this session had a high potential for 'fun'. Further analysis of the replay might reveal specific 'fun patterns'.
+{% endif %}
 
 ## 5. Supporting Evidence (Mock)
 

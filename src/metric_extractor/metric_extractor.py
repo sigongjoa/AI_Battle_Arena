@@ -11,6 +11,12 @@ class MetricExtractor:
     def __init__(self, db_manager: DBManager):
         self.db_manager = db_manager
         self.session_data = {} # To store parsed data for a session
+        self.r_theta_model = self._load_r_theta_model() # Placeholder for RLHF reward model
+
+    def _load_r_theta_model(self):
+        # In a real scenario, this would load a trained RLHF reward model (R_theta)
+        print("MetricExtractor: Mock loading R_theta reward model...")
+        return {"model_loaded": True, "version": "1.0"} # Mock model
 
     def extract_metrics_from_log(self, log_filepath: str):
         session_id = self._parse_session_id_from_filepath(log_filepath)
@@ -140,6 +146,12 @@ class MetricExtractor:
         # CounterPlayScore (Placeholder)
         counter_play_score = np.random.uniform(0.4, 0.8)
         self.db_manager.insert_immersion_metric(session_id, "CounterPlayScore", counter_play_score, 0, len(self.session_data['game_states']), time.time())
+
+        # New: FunScore (based on R_theta model)
+        # In a real scenario, this would involve feeding game state sequences to R_theta
+        # For now, a mock calculation.
+        fun_score = np.random.uniform(0.5, 1.0)
+        self.db_manager.insert_immersion_metric(session_id, "FunScore", fun_score, 0, len(self.session_data['game_states']), time.time())
         
         print(f"MetricExtractor: Stored Immersion/Rhythm metrics for session {session_id}")
 

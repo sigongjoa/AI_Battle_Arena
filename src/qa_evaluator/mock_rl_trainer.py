@@ -23,6 +23,10 @@ class MockRLTrainer:
             print(f"  Applying Action Masking Rules: {persona.action_masking_rules}")
         if persona.custom_reward_function_config:
             print(f"  Applying Custom Reward Function Config: {persona.custom_reward_function_config}")
+        
+        # Simulate integrating FunScore into reward function
+        if "FunScore" in persona.reward_weights:
+            print(f"  Integrating FunScore into reward function with weight: {persona.reward_weights['FunScore']}")
 
         # Simulate environment creation
         # env = make_vec_env("FightingGameEnv-v0", n_envs=1) 

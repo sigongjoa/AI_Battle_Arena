@@ -153,6 +153,8 @@ def test_metric_extractor_conceptual(clean_db_manager, tmp_path):
     assert cursor.fetchone()[0] == 1
     cursor.execute("SELECT COUNT(*) FROM qa_metrics WHERE session_id = ? AND metric_name = 'StabilityScore'", (mock_session_id,))
     assert cursor.fetchone()[0] == 1
+    cursor.execute("SELECT COUNT(*) FROM immersion_metrics WHERE session_id = ? AND metric_name = 'FunScore'", (mock_session_id,)) # Assert FunScore
+    assert cursor.fetchone()[0] == 1
     conn.close()
 
 # Test AI Personas (basic definition check)
@@ -191,13 +193,25 @@ def test_report_generator_conceptual(clean_db_manager, tmp_path):
     db_manager.insert_qa_metric(test_session_id, "BalanceScore", 0.85, 1, time.time())
     db_manager.insert_immersion_metric(test_session_id, "ComboRhythmScore", 0.92, 1, 5, time.time())
     db_manager.insert_immersion_metric(test_session_id, "TensionIndex", 0.6, 1, 5, time.time())
+    db_manager.insert_immersion_metric(test_session_id, "FunScore", 0.75, 1, 5, time.time()) # Insert FunScore
 
     generator = ReportGenerator(db_manager, template_dir=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'report_generator', 'templates')))
     output_dir = tmp_path / "test_reports"
-    report_path = generator.generate_report(test_session_id, output_dir=str(output_dir))
+    
+    # Mock persona analysis results to pass to the report generator
+    mock_persona_analysis_results = {
+        "Beginner AI_vs_Pro-gamer AI": {
+            "avg_stability": 0.9, "avg_balance": 0.8, "avg_responsiveness": 0.85, "avg_combo_rhythm": 0.7, "avg_fun_score": 0.8,
+            "conclusion": "Beginner AI showed slightly better stability against Pro-gamer AI."
+        }
+    }
+
+    report_path = generator.generate_report(test_session_id, persona_analysis_results=mock_persona_analysis_results, output_dir=str(output_dir))
     
     assert os.path.exists(report_path)
     with open(report_path, 'r') as f:
         content = f.read()
         assert test_session_id in content
         assert "StabilityScore" in content
+        assert "FunScore" in content # Check for FunScore content
+        assert "Beginner AI_vs_Pro-gamer AI" in content # Check for persona analysis content

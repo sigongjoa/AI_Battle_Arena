@@ -25,7 +25,7 @@ PERSONAS = {
     "Pro-gamer AI": AIPersona(
         name="Pro-gamer AI",
         description="Optimizes for winning, high damage output, and minimal errors.",
-        reward_weights={'damage': 2.0, 'survival': 1.5, 'win': 5.0, 'explore': 0.01, 'combo_success': 1.5},
+        reward_weights={'damage': 2.0, 'survival': 1.5, 'win': 5.0, 'explore': 0.01, 'combo_success': 1.5, 'FunScore': 0.5}, # Added FunScore
         training_params={'learning_rate': 0.0001, 'n_steps': 4096, 'gamma': 0.99},
         error_tolerance=0.0, # Simulates very few mistakes
         action_masking_rules={},

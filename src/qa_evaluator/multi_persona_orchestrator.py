@@ -40,29 +40,30 @@ class MultiPersonaOrchestrator:
                 # mock_model_p1 = load_model(p1.name)
                 # mock_model_p2 = load_model(p2.name)
 
-                # Dynamically set Human Error Layer parameters for the simulation
-                # For simplicity, we'll use p1's error_tolerance for the simulation
-                # In a real scenario, each player in the arena would have their own H.E.L.
-                # and Network Sim based on their persona.
-                print(f"    Setting Human Error Layer tolerance for simulation based on {p1.name} ({p1.error_tolerance})...")
-                # This would involve modifying the config or passing parameters to the arena.
-                # For this mock, we'll just acknowledge it.
+                # Prepare persona config for the simulation
+                # For simplicity, we'll use p1's config for the simulation environment
+                # In a real scenario, each player in the arena would have their own configs applied.
+                persona_config_for_sim = {
+                    'error_tolerance': p1.error_tolerance,
+                    'action_masking_rules': p1.action_masking_rules,
+                    'custom_reward_function_config': p1.custom_reward_function_config
+                }
+                print(f"    Applying simulation config based on {p1.name}...")
 
-                # Run mock simulation arena
-                # The mock_simulation_arena needs to be adapted to take persona parameters
-                # For now, it runs a generic simulation, and we'll extract metrics.
+                # Run mock simulation arena with persona config
                 print("    Running mock simulation arena...")
-                run_mock_simulation(num_frames=random.randint(30, 60)) # Run for a random duration
+                session_id = run_mock_simulation(num_frames=random.randint(30, 60), persona_config=persona_config_for_sim)
                 
-                # After simulation, extract metrics from the latest log file
+                # After simulation, extract metrics from the log file associated with the session_id
                 log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'logs', 'simulation_logs'))
-                log_files = [os.path.join(log_dir, f) for f in os.listdir(log_dir) if f.endswith('.jsonl.gz')]
-                if log_files:
-                    latest_log_file = max(log_files, key=os.path.getctime)
-                    self.metric_extractor.extract_metrics_from_log(latest_log_file)
-                    print(f"    Metrics extracted for match {match_idx + 1}.")
+                # Find the actual log file, as timestamp might vary slightly
+                found_log_files = [f for f in os.listdir(log_dir) if session_id in f and f.endswith('.jsonl.gz')]
+                if found_log_files:
+                    actual_log_filepath = os.path.join(log_dir, found_log_files[0])
+                    self.metric_extractor.extract_metrics_from_log(actual_log_filepath)
+                    print(f"    Metrics extracted for match {match_idx + 1} from {actual_log_filepath}.")
                 else:
-                    print("    No log file found to extract metrics from.")
+                    print(f"    No log file found for session {session_id} to extract metrics from.")
                 
                 time.sleep(0.5) # Simulate match processing time
 
