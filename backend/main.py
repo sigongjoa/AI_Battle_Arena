@@ -28,6 +28,7 @@ app.add_middleware(
 
 # API 라우터 포함
 app.include_router(api_routes.router, prefix="/api")
+print("API router included with prefix /api")
 
 
 @app.websocket("/ws/{peer_id}")

@@ -1,0 +1,12 @@
+# Configuration for Phase 7: AI-driven QA and Game Feel Analysis
+
+simulation:
+  human_error:
+    reaction_time_mean: 5 # frames
+    reaction_time_std: 2 # frames
+    mistake_probability: 0.05 # 5% chance of input mistake
+    drop_probability: 0.02 # 2% chance of input drop
+  network:
+    latency_mean: 50 # ms
+    latency_std: 10 # ms
+    packet_loss_probability: 0.01 # 1% chance of packet loss
