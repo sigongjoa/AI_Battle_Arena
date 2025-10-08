@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 import zlib # For compression
+import gzip
 
 class LogCollector:
     def __init__(self, log_dir="logs/simulation_logs", compress_after_session=True):
@@ -49,9 +50,8 @@ class LogCollector:
     def _compress_log_file(self, filepath):
         try:
             with open(filepath, 'rb') as f_in:
-                compressed_data = zlib.compress(f_in.read(), zlib.Z_BEST_COMPRESSION)
-            with open(filepath + '.gz', 'wb') as f_out:
-                f_out.write(compressed_data)
+                with gzip.open(filepath + '.gz', 'wb') as f_out:
+                    f_out.writelines(f_in)
             os.remove(filepath)
             print(f"LogCollector: Compressed {filepath} to {filepath}.gz and removed original.")
         except Exception as e:
