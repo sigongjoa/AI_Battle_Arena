@@ -19,29 +19,27 @@ class HumanErrorLayer:
         Assumes action is a simple string or dict for demonstration.
         """
         # Simulate input drop
-        if random.random() < self.drop_probability:
-            # print(f"  [HumanError] Input dropped: {action}")
+        if action is not None and random.random() < self.drop_probability:
             return None
 
-        # Simulate input delay
-        if not self.input_queue: # If queue is empty, new action comes in
-            delay_frames = max(0, int(random.gauss(self.reaction_time_mean, self.reaction_time_std)))
-            self.current_delay = delay_frames
+        # If a new action is provided, queue it up and calculate new delay if not already delaying
+        if action is not None:
             self.input_queue.append(action)
-            # print(f"  [HumanError] Input '{action}' received, delaying for {delay_frames} frames.")
-            return None # No action immediately
-
-        if self.current_delay > 0:
-            self.current_delay -= 1
-            # print(f"  [HumanError] Delaying '{self.input_queue[0]}', {self.current_delay} frames left.")
-            return None # Still delaying
+            if self.current_delay == 0: # Only calculate new delay if not already delaying
+                self.current_delay = max(0, int(random.gauss(self.reaction_time_mean, self.reaction_time_std)))
+            
+        # If no actions in queue, or still delaying, return None
+        if not self.input_queue or self.current_delay > 0:
+            if self.current_delay > 0:
+                self.current_delay -= 1
+            return None
 
         # Delay finished, get action from queue
         processed_action = self.input_queue.popleft()
+        self.current_delay = 0 # Reset delay after processing an action
 
         # Simulate input mistake
         if random.random() < self.mistake_probability:
-            # For simplicity, if action is a string, change it. If dict, change a key.
             if isinstance(processed_action, str):
                 mistake_action = processed_action + "_mistake"
             elif isinstance(processed_action, dict) and 'move' in processed_action:
@@ -49,10 +47,8 @@ class HumanErrorLayer:
                 mistake_action['move'] = 'random_move'
             else:
                 mistake_action = "mistake"
-            # print(f"  [HumanError] Input mistake: {processed_action} -> {mistake_action}")
             return mistake_action
         
-        # print(f"  [HumanError] Input processed: {processed_action}")
         return processed_action
 
 # Simple test function for human_error_layer

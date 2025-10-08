@@ -33,9 +33,10 @@ class MetricExtractor:
         replay_filepath = self.session_data.get('replay_filepath')
         
         if session_start_time and session_end_time:
+            print(f"DEBUG: Inserting session {session_id} with start={{session_start_time}}, end={{session_end_time}}, log={{log_filepath}}, replay={{replay_filepath}}")
             self.db_manager.insert_session(session_id, session_start_time, session_end_time, log_filepath, replay_filepath)
         else:
-            print(f"MetricExtractor: Missing start/end timestamps for session {session_id}")
+            print(f"DEBUG: Missing start/end timestamps for session {session_id}. Events: {events[:2]}...") # Added events for more context
             return
 
         # Calculate and store QA Metrics
@@ -49,10 +50,17 @@ class MetricExtractor:
     def _parse_session_id_from_filepath(self, filepath: str) -> str | None:
         # Expected format: session_YYYYMMDD_HHMMSS_UUID.jsonl.gz
         filename = os.path.basename(filepath)
-        parts = filename.split('_')
-        if len(parts) >= 4:
-            return parts[3].split('.')[0] # Get UUID part
-        return None
+        print(f"DEBUG: Filename in _parse_session_id_from_filepath: {filename}") # Added debug
+        # Split only by the first 3 underscores to isolate the UUID part
+        parts = filename.split('_', 3) # Split into at most 4 parts
+        print(f"DEBUG: Parts in _parse_session_id_from_filepath (split_limit=3): {parts}")
+        
+        if len(parts) == 4: # Expecting 4 parts: ['session', 'YYYYMMDD', 'HHMMSS', 'UUID.jsonl.gz']
+            uuid_part_with_extension = parts[3]
+            extracted_id = uuid_part_with_extension.split('.')[0] # Get UUID part by splitting before first dot
+            print(f"DEBUG: Extracted session ID from filename: {extracted_id}")
+            return extracted_id
+        print(f"DEBUG: Could not extract session ID from filename: {filename}")
 
     def _read_jsonl_gz(self, filepath: str) -> list:
         events = []
