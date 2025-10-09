@@ -31,6 +31,8 @@ const App: React.FC = () => {
   // --- Game Mode Detection ---
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const gameMode = useMemo(() => urlParams.get('mode'), [urlParams]);
+  const p1PeerId = useMemo(() => urlParams.get('p1_peer_id'), [urlParams]);
+  const p2PeerId = useMemo(() => urlParams.get('p2_peer_id'), [urlParams]);
 
   // --- Screen Navigation Effect ---
   useEffect(() => {
@@ -51,7 +53,8 @@ const App: React.FC = () => {
       return (
         <GameScreen
           localPlayerId={playerId}
-          remotePlayerId="rl_agent" // Dummy ID for the opponent
+          remotePlayerId={p1PeerId || 'rl_agent_p1'} // Use ID from URL or fallback
+          remotePlayerId2={p2PeerId || 'rl_agent_p2'} // Use ID from URL or fallback
           onNavigate={() => setCurrentScreen(Screen.MainMenu)}
         />
       );
