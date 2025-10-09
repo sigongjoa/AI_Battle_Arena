@@ -8,8 +8,8 @@ import VSScreen from './components/VSScreen';
 import MatchResults from './components/MatchResults';
 import MatchupAnalysis from './components/MatchupAnalysis';
 import AnalysisMode from './components/AnalysisMode';
-
-// RLAgentController is now used inside GameScreen, so no need to import it here.
+import { SignalingClient } from './src/webrtc/signaling';
+import { WebRtcClient } from './src/webrtc/client';
 
 // Define screen types
 export enum Screen {
@@ -27,12 +27,31 @@ export enum Screen {
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState(Screen.MainMenu);
   const [playerId] = useState<string>(`player_${Math.random().toString(36).substr(2, 9)}`);
+  const [webRtcClient, setWebRtcClient] = useState<WebRtcClient | null>(null);
 
   // --- Game Mode Detection ---
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const gameMode = useMemo(() => urlParams.get('mode'), [urlParams]);
-  const p1PeerId = useMemo(() => urlParams.get('p1_peer_id'), [urlParams]);
-  const p2PeerId = useMemo(() => urlParams.get('p2_peer_id'), [urlParams]);
+  const backendPeerId = useMemo(() => urlParams.get('backend_peer_id'), [urlParams]);
+
+  // --- WebRTC Initialization Effect ---
+  useEffect(() => {
+    if (gameMode === 'rl_training' && backendPeerId) {
+      const signalingClient = new SignalingClient('ws://localhost:8001/ws');
+      const client = new WebRtcClient({
+        signalingClient,
+        localPlayerId: playerId,
+        remotePlayerId: backendPeerId,
+        initiator: true, // Frontend is the initiator in this scenario
+      });
+      setWebRtcClient(client);
+      client.start();
+
+      return () => {
+        client.destroy();
+      };
+    }
+  }, [gameMode, backendPeerId, playerId]);
 
   // --- Screen Navigation Effect ---
   useEffect(() => {
@@ -48,13 +67,10 @@ const App: React.FC = () => {
 
   const renderScreen = () => {
     // In RL Training mode, we directly render the GameScreen.
-    // GameScreen itself will handle the RLAgentController.
     if (gameMode === 'rl_training') {
       return (
         <GameScreen
-          localPlayerId={playerId}
-          remotePlayerId={p1PeerId || 'rl_agent_p1'} // Use ID from URL or fallback
-          remotePlayerId2={p2PeerId || 'rl_agent_p2'} // Use ID from URL or fallback
+          webRtcClient={webRtcClient}
           onNavigate={() => setCurrentScreen(Screen.MainMenu)}
         />
       );
@@ -65,12 +81,9 @@ const App: React.FC = () => {
       case Screen.MainMenu:
         return <MainMenu onNavigate={navigateTo} />;
       case Screen.GameScreen:
-         // This path is for non-RL game modes, which are not implemented with the new architecture yet.
-         // We can show a placeholder or the main menu.
         console.warn("GameScreen in non-RL mode is not supported in this version.");
         return <MainMenu onNavigate={navigateTo} />;
       case Screen.CharacterSelect:
-        // Assuming characters are fetched elsewhere or not needed for this simplified version
         return <CharacterSelect onNavigate={navigateTo} characters={[]} />;
       case Screen.TrainingMode:
         return <TrainingMode onNavigate={navigateTo} />;

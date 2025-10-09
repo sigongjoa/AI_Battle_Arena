@@ -1,25 +1,37 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { WebRtcClient } from '../src/webrtc/client';
-import { GameEngine } from '../src/shared_game_logic/engine';
-import { GameState, CharacterState } from '../src/shared_game_logic/game_state';
-import { PlayerInput } from '../src/shared_game_logic/input_data';
-import { FixedPoint } from '../src/shared_game_logic/fixed_point';
-import RLAgentController from './RLAgentController';
+import React, { useState } from 'react';
+import HUD from './HUD';
+import Character from './Character';
+import PauseMenu from './PauseMenu';
+import { Screen } from '../App';
 
-// ... (interface definition)
+interface GameScreenProps {
+  webRtcClient: any;
+  onNavigate: (screen: Screen) => void;
+}
 
-const GameScreen: React.FC<GameScreenProps> = ({ localPlayerId, remotePlayerId, remotePlayerId2, onNavigate }) => {
-  // ... (existing code)
+const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, onNavigate }) => {
+  const [isPaused, setIsPaused] = useState(false);
+
+  const handleResume = () => {
+    setIsPaused(false);
+  };
+
+  // Dummy player data for now, this will be replaced by data from the backend
+  const player1 = { id: 'p1', name: 'Player 1' };
+  const player2 = { id: 'p2', name: 'Player 2' };
 
   return (
-    <div className="relative w-screen h-screen bg-black">
-      <RLAgentController localPlayerId={localPlayerId} remotePlayerId={remotePlayerId} />
-      <RLAgentController localPlayerId={`${localPlayerId}_p2`} remotePlayerId={remotePlayerId2} />
-      <HUD />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <Character player="p1" />
-          <Character player="p2" />
-      </div>
+    <div className="game-screen">
+      <HUD 
+        player1={player1} 
+        player2={player2} 
+        webRtcClient={webRtcClient} 
+        onMatchEnd={() => onNavigate(Screen.MatchResults)} 
+        onNavigate={onNavigate} 
+      />
       {isPaused && <PauseMenu onResume={handleResume} onExit={() => onNavigate(Screen.MainMenu)} />}
+    </div>
+  );
+};
 
 export default GameScreen;

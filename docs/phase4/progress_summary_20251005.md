@@ -46,13 +46,10 @@
 
 *   **문제 1: `App.tsx:164 Uncaught TypeError: webRtcClient.current.start is not a function`**
     *   **원인:** 프론트엔드 (`arcade-clash`)가 `WebRtcClient`에 추가된 `start` 메서드를 인식하지 못함. 이는 `npm run dev`가 변경 사항을 제대로 반영하지 못했거나 캐싱 문제일 가능성이 높음.
-*   **문제 2: PeerJS 서버 연결 거부 (`Failed to load resource: net::ERR_CONNECTION_REFUSED` for `:9000/myapp/peerjs/id?ts=...`)**
-    *   **원인:** PeerJS 서버 (`backend/peerjs_server.js`)가 실행 중이 아니거나 `localhost:9000`에서 접근할 수 없음.
-*   **문제 3: 백엔드 시그널링 서버 연결 거부 (`WebSocket connection to 'ws://localhost:8001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED`)**
-    *   **원인:** `arcade-clash/App.tsx`의 `SIGNALING_SERVER_URL`을 `ws://localhost:8001/ws`로 수정했음에도 불구하고 연결이 거부됨. 백엔드 `uvicorn` 서버가 실행 중이 아니거나, 방화벽 문제, 또는 서버 설정 문제일 수 있음.
+*   **문제 2: 백엔드 시그널링 서버 연결 거부 (`WebSocket connection to 'ws://localhost:8001/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED`)**
+    *   **원인:** `arcade-clash/App.tsx`의 `SIGNALING_SERVER_URL`을 `ws://localhost:8001/ws`로 수정했음에도 불구하고 연결이 거부됨. 이는 `backend/main.py`를 통해 실행되는 백엔드 `uvicorn` 서버가 실행 중이 아니거나, 방화벽 문제, 또는 서버 설정 문제일 수 있음.
 
 ### 2.3 제안된 해결책
 
 *   **프론트엔드 개발 서버 재시작:** `npm run dev` 프로세스를 재시작하여 모든 프론트엔드 변경 사항이 반영되도록 합니다.
-*   **PeerJS 서버 시작:** 별도의 터미널에서 `node backend/peerjs_server.js`를 실행하여 PeerJS 서버를 시작합니다.
-*   **백엔드 시그널링 서버 상태 확인:** `uvicorn` 서버의 터미널을 확인하여 WebSocket 연결과 관련된 오류 메시지가 있는지 확인합니다.
+*   **백엔드 시그널링 서버 실행:** 별도의 터미널에서 `python backend/main.py`를 실행하여 FastAPI 기반의 시그널링 서버를 시작하고, WebSocket 연결과 관련된 오류 메시지가 없는지 확인합니다.

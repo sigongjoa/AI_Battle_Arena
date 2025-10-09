@@ -2,78 +2,45 @@ import React, { useState, useEffect } from 'react';
 import { Character as CharacterType, Screen } from '../types';
 import PauseMenu from './PauseMenu';
 import Character from './Character';
-import { gameClient, controllClient } from '../src/grpc/client'; // Import controllClient
-import { GameState, GameStateRequest, PlayerState } from "../src/grpc/game_pb";
-import { GameInputProvider } from './GameInputProvider'; // Import GameInputProvider
+import { GameInputProvider } from './GameInputProvider';
 
 interface HUDProps {
   player1: CharacterType;
   player2: CharacterType;
+  webRtcClient: any; // WebRTC client will be passed as a prop
   onMatchEnd: (winner: CharacterType | null) => void;
   onNavigate: (screen: Screen) => void;
 }
 
-const defaultGameState: GameState = {
-  matchId: '',
+const defaultGameState = {
   timer: 99,
   players: [],
-  winnerId: undefined,
 };
 
-const HUD: React.FC<HUDProps> = ({ player1, player2, onMatchEnd, onNavigate }) => {
-  const [gameState, setGameState] = useState<GameState>(defaultGameState);
+const HUD: React.FC<HUDProps> = ({ player1, player2, webRtcClient, onMatchEnd, onNavigate }) => {
+  const [gameState, setGameState] = useState(defaultGameState);
   const [isPaused, setIsPaused] = useState(false);
-  const [matchId, setMatchId] = useState<string>('');
 
   useEffect(() => {
-    const p1Initial: PlayerState = {
-        id: player1.id,
-        character: player1.name,
-        x: 200, y: 450, action: 'idle', frame: 0, health: 100, superGauge: 0,
-    };
-    const p2Initial: PlayerState = {
-        id: player2.id,
-        character: player2.name,
-        x: 600, y: 450, action: 'idle', frame: 0, health: 100, superGauge: 0,
-    };
-    setGameState(prev => ({ ...prev, players: [p1Initial, p2Initial] }));
+    if (!webRtcClient) return;
 
-    const newMatchId = `match_${Date.now()}`;
-    setMatchId(newMatchId);
-
-    const request = new GameStateRequest({
-      matchId: newMatchId,
-      player1Id: player1.id,
-      player2Id: player2.id,
-    });
-
-    const controller = new AbortController();
-    const stream = gameClient.streamGameState(request, { signal: controller.signal });
-
-    const consumeStream = async () => {
-      try {
-        for await (const response of stream) {
-          setGameState(response);
-          if (response.winnerId !== undefined && response.winnerId !== "0") {
-            const winner = response.winnerId === player1.id ? player1 : (response.winnerId === player2.id ? player2 : null);
-            setTimeout(() => onMatchEnd(winner), 1000);
-            break;
-          }
-        }
-      } catch (error: any) {
-        if (error.code !== 'CANCELLED') {
-          console.error('gRPC stream error:', error);
+    const handleData = (data: any) => {
+      const message = JSON.parse(data);
+      if (message.type === 'gameState') {
+        setGameState(message.state);
+        if (message.state.winnerId) {
+          const winner = message.state.winnerId === player1.id ? player1 : (message.state.winnerId === player2.id ? player2 : null);
+          setTimeout(() => onMatchEnd(winner), 1000);
         }
       }
     };
 
-    consumeStream();
+    webRtcClient.on('data', handleData);
 
     return () => {
-      console.log('gRPC stream: Unmounting component, cancelling stream.');
-      controller.abort();
+      webRtcClient.off('data', handleData);
     };
-  }, [player1, player2, onMatchEnd]);
+  }, [webRtcClient, player1, player2, onMatchEnd]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -89,12 +56,7 @@ const HUD: React.FC<HUDProps> = ({ player1, player2, onMatchEnd, onNavigate }) =
   const p2State = gameState.players.find(p => p.id === player2.id);
 
   return (
-    <GameInputProvider 
-      grpcClient={controllClient}
-      matchId={matchId}
-      player1Id={player1.id}
-      player2Id={player2.id}
-    >
+    <GameInputProvider webRtcClient={webRtcClient}>
       <div className="relative min-h-screen w-full bg-cover bg-center" style={{ backgroundImage: "url('/assets/backgrounds/background1.png')" }}>
         {isPaused && <PauseMenu onResume={() => setIsPaused(false)} onRestart={() => onNavigate(Screen.CharacterSelect)} onQuit={() => onNavigate(Screen.MainMenu)} />}
         <div className="absolute inset-0 bg-black/50"></div>

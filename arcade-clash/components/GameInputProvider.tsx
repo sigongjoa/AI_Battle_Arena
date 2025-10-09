@@ -1,24 +1,24 @@
 import React, { useEffect } from "react";
-import { gameClient } from "../src/grpc/client";
-import { PlayerInput } from "../src/grpc/game_pb"; // 입력 메시지
 
-export const GameInputProvider: React.FC = ({ children }) => {
+// This component will be responsible for capturing user input and sending it over WebRTC.
+// The actual WebRTC client will be passed in as a prop.
+
+export const GameInputProvider: React.FC<{ webRtcClient: any, children: React.ReactNode }> = ({ webRtcClient, children }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      let input: PlayerInput | null = null;
+      let action: string | null = null;
 
       if (e.key === "ArrowLeft") {
-        input = new PlayerInput({ action: "LEFT" });
+        action = "LEFT";
       } else if (e.key === "ArrowRight") {
-        input = new PlayerInput({ action: "RIGHT" });
+        action = "RIGHT";
       } else if (e.key === " ") {
-        input = new PlayerInput({ action: "PUNCH" });
+        action = "PUNCH";
       }
 
-      if (input) {
-        // 🔑 client-streaming 대신 매번 Unary 호출
-        gameClient.sendPlayerInput(input)
-          .catch(err => console.error("sendPlayerInput error:", err));
+      if (action && webRtcClient) {
+        // Send the input over WebRTC
+        webRtcClient.send(JSON.stringify({ type: 'input', action }));
       }
     };
 
@@ -26,7 +26,7 @@ export const GameInputProvider: React.FC = ({ children }) => {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [webRtcClient]);
 
   return <>{children}</>;
 };
