@@ -1,3 +1,4 @@
+import re
 import json
 import os
 import gzip
@@ -55,14 +56,12 @@ class MetricExtractor:
     def _parse_session_id_from_filepath(self, filepath: str) -> str | None:
         # Expected format: session_YYYYMMDD_HHMMSS_UUID.jsonl.gz
         filename = os.path.basename(filepath)
-        print(f"DEBUG: Filename in _parse_session_id_from_filepath: {filename}") # Added debug
-        # Split only by the first 3 underscores to isolate the UUID part
-        parts = filename.split('_', 3) # Split into at most 4 parts
-        
-        if len(parts) == 4: # Expecting 4 parts: ['session', 'YYYYMMDD', 'HHMMSS', 'UUID.jsonl.gz']
-            uuid_part_with_extension = parts[3]
-            extracted_id = uuid_part_with_extension.split('.')[0] # Get UUID part by splitting before first dot
-            return extracted_id
+        print(f"DEBUG: Filename in _parse_session_id_from_filepath: {filename}")
+        # Use regex to extract the UUID part, which can contain hyphens
+        match = re.search(r'session_\d{8}_\d{6}_(.*)\.jsonl\.gz', filename)
+        print(f"DEBUG: Regex match object: {match}")
+        if match:
+            return match.group(1)
         return None
 
     def _read_jsonl_gz(self, filepath: str) -> list:
