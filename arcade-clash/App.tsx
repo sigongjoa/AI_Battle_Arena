@@ -9,6 +9,7 @@ import MatchResults from './components/MatchResults';
 import MatchupAnalysis from './components/MatchupAnalysis';
 import AnalysisMode from './components/AnalysisMode';
 import RLDemoPage from './components/RLDemoPage'; // Import RLDemoPage
+import RLDashboardPage from './components/RLDashboardPage'; // Import RLDashboardPage
 import { SignalingClient } from './src/webrtc/signaling';
 import { WebRtcClient } from './src/webrtc/client';
 
@@ -23,7 +24,8 @@ export enum Screen {
   MatchResults,
   MatchupAnalysis,
   AnalysisMode,
-  RLDemo, // Add RLDemo screen
+  RLDemo,
+  RLDashboard, // Add RLDashboard screen
 }
 
 const App: React.FC = () => {
@@ -99,8 +101,10 @@ const App: React.FC = () => {
         return <MatchupAnalysis onNavigate={navigateTo} />;
       case Screen.AnalysisMode:
         return <AnalysisMode onNavigate={navigateTo} />;
-      case Screen.RLDemo: // Add RLDemo case
+      case Screen.RLDemo:
         return <RLDemoPage />;
+      case Screen.RLDashboard: // Add RLDashboard case
+        return <RLDashboardPage />;
       default:
         return <MainMenu onNavigate={navigateTo} />;
     }
