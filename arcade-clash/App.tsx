@@ -8,6 +8,7 @@ import VSScreen from './components/VSScreen';
 import MatchResults from './components/MatchResults';
 import MatchupAnalysis from './components/MatchupAnalysis';
 import AnalysisMode from './components/AnalysisMode';
+import RLDemoPage from './components/RLDemoPage'; // Import RLDemoPage
 import { SignalingClient } from './src/webrtc/signaling';
 import { WebRtcClient } from './src/webrtc/client';
 
@@ -22,6 +23,7 @@ export enum Screen {
   MatchResults,
   MatchupAnalysis,
   AnalysisMode,
+  RLDemo, // Add RLDemo screen
 }
 
 const App: React.FC = () => {
@@ -97,6 +99,8 @@ const App: React.FC = () => {
         return <MatchupAnalysis onNavigate={navigateTo} />;
       case Screen.AnalysisMode:
         return <AnalysisMode onNavigate={navigateTo} />;
+      case Screen.RLDemo: // Add RLDemo case
+        return <RLDemoPage />;
       default:
         return <MainMenu onNavigate={navigateTo} />;
     }

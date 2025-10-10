@@ -103,6 +103,9 @@ export default function MainMenu(props: MainMenuProps) {
                 <SecondaryButton onClick={() => onNavigate(Screen.DebugScreen)}>
                     Debug Screen
                 </SecondaryButton>
+                <SecondaryButton onClick={() => onNavigate(Screen.RLDemo)}>
+                    RL Demo
+                </SecondaryButton>
             </nav>
         </>
     );
