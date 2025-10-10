@@ -2,6 +2,7 @@ import { FixedPoint } from './fixed_point';
 import { GameState, CharacterState } from './game_state';
 import { PlayerInput } from './input_data';
 import { CharacterData, AppearanceData, SkillData, ParameterData } from '@/types'; // Import new interfaces
+import { deepCopyGameState, fixedPointReviver } from './utils'; // Import utility functions
 
 // Helper function to map numeric action IDs to string representations
 const mapActionIdToString = (actionId: number): string => {
@@ -25,6 +26,9 @@ export class GameEngine {
     private aiPlayerId: string; // The ID of the player controlled by AI
     private lastInputActions: { [playerId: string]: string }; // Stores the last input action string for each player
 
+    // --- Checksum and State Management for Rollback POC ---
+    private stateHistory: Map<number, GameState> = new Map();
+
     constructor(
         initialState: GameState,
         fixedDeltaTime: FixedPoint,
@@ -32,7 +36,7 @@ export class GameEngine {
         remotePlayerId: string,
         aiPlayerId: string = 'player1' // Default to player1 for AI control
     ) {
-        this.gameState = initialState;
+        this.gameState = deepCopyGameState(initialState); // Ensure initial state is deep copied
         this.fixedDeltaTime = fixedDeltaTime;
         this.localPlayerId = localPlayerId;
         this.remotePlayerId = remotePlayerId;
@@ -41,7 +45,7 @@ export class GameEngine {
     }
 
     public getGameState(): GameState {
-        return this.gameState;
+        return deepCopyGameState(this.gameState); // Return a deep copy to prevent external modification
     }
 
     public loadGeneratedCharacter(characterData: CharacterData, targetPlayerId: string): void {
@@ -50,7 +54,7 @@ export class GameEngine {
         // Update player properties based on generated character data
         playerToUpdate.id = characterData.id; // Update ID to generated ID
         playerToUpdate.health = FixedPoint.fromInt(characterData.parameters.health);
-        // For now, we'll just update health and action. Other parameters (attackPower, defense, speed) 
+        // For now, we'll just update health and action. Other parameters (attackPower, defense, speed)
         // and skills would require more complex game logic integration.
         playerToUpdate.action = 'idle'; // Reset action
         // appearance data would be used by rendering logic, not directly in GameState for now
@@ -82,38 +86,58 @@ export class GameEngine {
     }
 
     public update(localInput: PlayerInput): void {
-        // Update last input action for the local player
-        this.lastInputActions[localInput.playerId] = this.mapPlayerInputToSimplifiedAction(localInput.inputs);
+        // This method is for client-side local input processing
+        // For full frame simulation with all player inputs, use simulateFrame
+        // For now, we'll just apply the local input directly
+        this.applyPlayerInput(localInput);
+        this.advanceFrame();
+    }
 
-        // Apply local input to the game state
-        const player = this.gameState[localInput.playerId === this.gameState.player1.id ? 'player1' : 'player2'];
-        if (localInput.inputs.left) {
+    public simulateFrame(allPlayerInputs: { [playerId: string]: PlayerInput }): void {
+        // Apply inputs for all players for this frame
+        for (const playerId in allPlayerInputs) {
+            if (allPlayerInputs.hasOwnProperty(playerId)) {
+                this.applyPlayerInput(allPlayerInputs[playerId]);
+            }
+        }
+        this.advanceFrame();
+    }
+
+    private applyPlayerInput(playerInput: PlayerInput): void {
+        this.lastInputActions[playerInput.playerId] = this.mapPlayerInputToSimplifiedAction(playerInput.inputs);
+
+        const player = this.gameState[playerInput.playerId === this.gameState.player1.id ? 'player1' : 'player2'];
+        if (playerInput.inputs.left) {
             player.position.x = player.position.x.subtract(FixedPoint.fromFloat(0.1));
-        } else if (localInput.inputs.right) {
+        } else if (playerInput.inputs.right) {
             player.position.x = player.position.x.add(FixedPoint.fromFloat(0.1));
         }
-        if (localInput.inputs.jump && player.isGrounded) {
+        if (playerInput.inputs.jump && player.isGrounded) {
             player.velocity.y = FixedPoint.fromFloat(0.5);
             player.isGrounded = false;
         }
-        if (localInput.inputs.attack) {
+        if (playerInput.inputs.attack) {
             player.action = 'attacking';
-        } else if (localInput.inputs.guard) {
+        } else if (playerInput.inputs.guard) {
             player.action = 'guarding';
         } else {
             player.action = 'idle';
         }
+    }
 
-        // Simulate gravity
-        if (!player.isGrounded) {
-            player.velocity.y = player.velocity.y.subtract(FixedPoint.fromFloat(0.05));
-            player.position.y = player.position.y.add(player.velocity.y);
-            if (player.position.y.toFloat() <= 0) {
-                player.position.y = FixedPoint.fromFloat(0);
-                player.velocity.y = FixedPoint.fromFloat(0);
-                player.isGrounded = true;
+    private advanceFrame(): void {
+        // Simulate gravity for both players
+        [this.gameState.player1, this.gameState.player2].forEach(player => {
+            if (!player.isGrounded) {
+                player.velocity.y = player.velocity.y.subtract(FixedPoint.fromFloat(0.05));
+                player.position.y = player.position.y.add(player.velocity.y);
+                if (player.position.y.toFloat() <= 0) {
+                    player.position.y = FixedPoint.fromFloat(0);
+                    player.velocity.y = FixedPoint.fromFloat(0);
+                    player.isGrounded = true;
+                }
             }
-        }
+        });
 
         // Advance frame
         this.gameState.frame++;
@@ -185,5 +209,34 @@ export class GameEngine {
             },
         };
         this.lastInputActions = { [this.gameState.player1.id]: 'idle', [this.gameState.player2.id]: 'idle' };
+    }
+
+    public calculateChecksum(): string {
+        // Create a deterministic string representation of the current game state
+        // Use deepCopyGameState to ensure FixedPoint objects are correctly serialized
+        const stateForChecksum = deepCopyGameState(this.gameState);
+        return JSON.stringify(stateForChecksum);
+    }
+
+    public saveState(frame: number): void {
+        this.stateHistory.set(frame, deepCopyGameState(this.gameState));
+    }
+
+    public loadState(frame: number): boolean {
+        const savedState = this.stateHistory.get(frame);
+        if (savedState) {
+            this.gameState = deepCopyGameState(savedState); // Deep copy to ensure FixedPoint objects are reconstructed
+            return true;
+        }
+        return false;
+    }
+
+    public cleanStateHistory(upToFrame: number): void {
+        // Remove states older than upToFrame to manage memory
+        this.stateHistory.forEach((_, frame) => {
+            if (frame < upToFrame) {
+                this.stateHistory.delete(frame);
+            }
+        });
     }
 }
