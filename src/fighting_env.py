@@ -8,6 +8,7 @@ from typing import Tuple # Import Tuple
 
 from src.webrtc_client import WebRTCClient
 from src.rhythm_analyzer import RhythmAnalyzer
+from src.reward_calculator import RewardCalculator # Import RewardCalculator
 
 # Basic logging setup
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +55,9 @@ class FightingEnv(gym.Env):
 
         self._wait_for_connection()
 
+        # Instantiate RewardCalculator
+        self.reward_calculator = RewardCalculator() # Using default values for now
+
     def _wait_for_connection(self):
         """
         Waits for the 'connection_ready' message from the frontend.
@@ -71,55 +75,6 @@ class FightingEnv(gym.Env):
             logger.error("Timeout: Frontend did not connect within 60 seconds.")
             raise ConnectionAbortedError("Frontend connection timed out.")
 
-    def _calculate_reward(self, prev_state, current_state, p1_action):
-        """
-        Calculates the reward based on the change between the previous and current state.
-        """
-        if not prev_state:
-            return 0.0
-
-        reward = 0.0
-
-        # Reward scales (can be tuned)
-        DAMAGE_REWARD_SCALE = 1.0
-        DAMAGE_PENALTY_SCALE = 1.0
-        WIN_REWARD = 100.0
-        LOSS_PENALTY = -100.0
-        DISTANCE_CLOSER_REWARD_SCALE = 0.01
-        DISTANCE_FURTHER_PENALTY_SCALE = 0.005
-        IDLE_PENALTY = -0.01
-
-        # 1. Damage dealt/taken reward
-        damage_dealt = prev_state["p2_health"] - current_state["p2_health"]
-        if damage_dealt > 0:
-            reward += damage_dealt * DAMAGE_REWARD_SCALE
-
-        damage_taken = prev_state["p1_health"] - current_state["p1_health"]
-        if damage_taken > 0:
-            reward -= damage_taken * DAMAGE_PENALTY_SCALE
-
-        # 2. Distance reward/penalty
-        prev_distance = abs(prev_state["p1_pos_x"] - prev_state["p2_pos_x"])
-        current_distance = abs(current_state["p1_pos_x"] - current_state["p2_pos_x"])
-        distance_change = prev_distance - current_distance  # Positive if distance decreased
-        if distance_change > 0:  # Moving closer
-            reward += distance_change * DISTANCE_CLOSER_REWARD_SCALE
-        elif distance_change < 0:  # Moving further
-            reward -= abs(distance_change) * DISTANCE_FURTHER_PENALTY_SCALE
-
-        # 3. Idle penalty for player 1
-        if p1_action == 0:  # Assuming 0 is the idle action
-            reward += IDLE_PENALTY
-
-        # 4. Win/Loss reward
-        if current_state["round_over"]:
-            if current_state["p1_health"] > current_state["p2_health"]:
-                reward += WIN_REWARD
-            elif current_state["p1_health"] < current_state["p2_health"]:
-                reward += LOSS_PENALTY
-        
-        return reward
-
     def step(self, action: Tuple[int, int]):
         p1_action, p2_action = action
         self.action_queue.put({"type": "action", "p1Action": int(p1_action), "p2Action": int(p2_action)})
@@ -136,8 +91,28 @@ class FightingEnv(gym.Env):
             truncated = False
             info = {}
 
-            # Calculate reward on the backend
-            reward = self._calculate_reward(self.prev_state, current_state, p1_action)
+            # Prepare data for RewardCalculator
+            player_state = {
+                "health": current_state["p1_health"],
+                "x": current_state["p1_pos_x"],
+            }
+            opponent_state = {
+                "health": current_state["p2_health"],
+                "x": current_state["p2_pos_x"],
+            }
+            game_info = {
+                "round_over": current_state["round_over"],
+                "player_won": current_state["p1_health"] > current_state["p2_health"], # Assuming p1 is the agent
+            }
+            last_player_health = self.prev_state.get("p1_health", current_state["p1_health"])
+            last_opponent_health = self.prev_state.get("p2_health", current_state["p2_health"])
+            last_distance = abs(self.prev_state.get("p1_pos_x", 0) - self.prev_state.get("p2_pos_x", 0))
+
+            # Calculate reward using RewardCalculator
+            reward = self.reward_calculator.calculate_reward(
+                player_state, opponent_state, game_info, p1_action,
+                last_player_health, last_opponent_health, last_distance
+            )
 
             # Update previous state
             self.prev_state = current_state
