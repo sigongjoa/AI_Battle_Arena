@@ -1,6 +1,6 @@
 import asyncio
 import os
-
+from typing import Tuple
 import numpy as np
 from stable_baselines3 import PPO
 
@@ -8,23 +8,22 @@ from src.constants import FPS
 from src.fighting_env import FightingEnv
 from src.rhythm_analyzer import RhythmAnalyzer
 
-from .. import game_pb2
-
 # Define MODEL_DIR
 MODEL_DIR = "./models/ppo_fighting_env_multi_agent"
 
 
 class GameRunner:
     """
-    Manages and runs a single Pygame game instance, streaming its state via gRPC.
+    Manages and runs a single Pygame game instance.
+    (gRPC streaming functionality removed as per user instruction)
     """
 
-    def __init__(self, match_id: str, player1_id: str, player2_id: str):
+    def __init__(self, match_id: str, player1_id: str, player2_id: str, backend_peer_id: str):
         self.match_id = match_id
         self.player1_id = player1_id
         self.player2_id = player2_id
         self._running = False
-        self.env = FightingEnv(headless=True)
+        self.env = FightingEnv(backend_peer_id=backend_peer_id, test_mode=True)
         self.obs, _ = self.env.reset()  # Store initial observation
 
         # Initialize RhythmAnalyzers for both players
@@ -45,7 +44,7 @@ class GameRunner:
 
     async def handle_player_input(self, player_id: str, key: str, key_action: int):
         """
-        Handles player input received from the gRPC stream.
+        Handles player input received.
         key_action: 0 for PRESS, 1 for RELEASE
         """
         player = None
@@ -93,7 +92,7 @@ class GameRunner:
 
     async def run_grpc_stream(self):
         """
-        Runs the game loop and yields GameState protobuf messages for streaming.
+        Runs the game loop. (gRPC streaming functionality removed).
         """
         self._running = True
         print(
@@ -137,41 +136,15 @@ class GameRunner:
             self.player1_analyzer.add_action(p1_action_name, self.env.game.frame_count)
             self.player2_analyzer.add_action(p2_action_name, self.env.game.frame_count)
 
-            p1 = self.env.game.player1
-            p2 = self.env.game.player2
-
-            current_frame = (self.env.game.frame_count // 6) % 4
-
-            p1_state_pb = game_pb2.PlayerState(
-                id=int(self.player1_id),
-                character="RYU",
-                x=p1.rect.centerx,
-                y=p1.rect.centery,
-                action=p1.state,
-                frame=current_frame,
-                health=p1.health,
-                super_gauge=0,  # Placeholder
-            )
-            p2_state_pb = game_pb2.PlayerState(
-                id=int(self.player2_id),
-                character="KEN",
-                x=p2.rect.centerx,
-                y=p2.rect.centery,
-                action=p2.state,
-                frame=current_frame,
-                health=p2.health,
-                super_gauge=0,  # Placeholder
-            )
-
-            game_state_pb = game_pb2.GameState(
-                match_id=self.match_id,
-                timer=self.env.game.round_timer,
-                players=[p1_state_pb, p2_state_pb],
-            )
+            # Game state would have been streamed here via gRPC
+            # For now, just print a message
+            # print(f"Game state for match {self.match_id} at frame {self.env.game.frame_count} would be streamed.")
 
             if done:
                 self._running = False
                 winner_id = "0"  # Draw by default
+                p1 = self.env.game.player1
+                p2 = self.env.game.player2
                 if p1.health <= 0:
                     winner_id = self.player2_id
                 elif p2.health <= 0:
@@ -181,10 +154,7 @@ class GameRunner:
                         winner_id = self.player1_id
                     elif p2.health > p1.health:
                         winner_id = self.player2_id
-
-                game_state_pb.winner_id = int(winner_id)
-
-            yield game_state_pb
+                print(f"Match {self.match_id} ended. Winner: {winner_id}")
 
             if done:
                 break

@@ -36,7 +36,8 @@ main 브랜치에 코드가 통합(merge)되면, 지정된 서버에서 자동�
 *   **강화학습 훈련 실행**:
     *   `train_rl_agent.py` 스크립트를 실행하여 AI 모델 학습을 시작합니다.
 *   **결과물 아카이빙**:
-    *   훈련이 완료되면 생성된 **학습 모델 파일(\*.zip)**과 TensorBoard 로그를 GitHub Actions의 Artifacts나 외부 저장소(예: AWS S3)에 업로드하여 버전을 관리하고 결과를 추적할 수 있도록 합니다.
+    *   훈련이 완료되면 생성된 **학습 모델 파일(*.zip)**은 라이브 시연을 위한 백엔드 서버에 로드될 수 있도록 관리합니다.
+    *   TensorBoard 로그는 GitHub Actions의 Artifacts나 외부 저장소(예: AWS S3)에 업로드하여 버전을 관리하고, **GitHub Pages를 통한 정적 시각화**에 활용될 수 있도록 합니다.
 
 ### ⚙️ Phase 2를 위한 샘플 GitHub Actions 워크플로우
 

@@ -91,33 +91,44 @@ const RLAgentController: React.FC<RLAgentControllerProps> = ({ backendPeerId, ga
         }
 
         if (message.type === 'action') {
-          console.log("RLAgentController: Processing 'action' message.");
-          engine.applyExternalAction(message.action);
-          const observation = engine.getObservationForAgent();
-          const reward = 0; // TODO: Implement reward calculation
-          const done = false; // TODO: Implement done condition check
-          const lastInputActions = engine.getLastInputActions();
+          // Apply actions for both players
+          engine.applyExternalAction(engine.getGameState().player1.id, message.p1Action);
+          engine.applyExternalAction(engine.getGameState().player2.id, message.p2Action);
+          engine.update(); // Update the game state after applying actions
+
+          const currentGameState = engine.getGameState();
+          const statePayload = {
+            observation: engine.getObservationForAgent(),
+            p1_health: currentGameState.player1.health.toNumber(),
+            p2_health: currentGameState.player2.health.toNumber(),
+            p1_pos_x: currentGameState.player1.position.x.toNumber(),
+            p2_pos_x: currentGameState.player2.position.x.toNumber(),
+            round_over: currentGameState.roundOver,
+          };
 
           const response: FrontendMessage = {
-            type: 'step_result',
-            observation,
-            reward,
-            done,
-            p1_action_str: lastInputActions.p1Action,
-            p2_action_str: lastInputActions.p2Action,
-            current_frame: engine.getGameState().frame,
+            type: 'action_result',
+            state: statePayload,
           };
           dc.send(JSON.stringify(response));
-          console.log("RLAgentController: Sent 'step_result'.");
 
         } else if (message.type === 'reset') {
           console.log("RLAgentController: Processing 'reset' message.");
           engine.resetForRL();
-          const observation = engine.getObservationForAgent();
+          const currentGameState = engine.getGameState();
+
+          const statePayload = {
+            observation: engine.getObservationForAgent(),
+            p1_health: currentGameState.player1.health.toNumber(),
+            p2_health: currentGameState.player2.health.toNumber(),
+            p1_pos_x: currentGameState.player1.position.x.toNumber(),
+            p2_pos_x: currentGameState.player2.position.x.toNumber(),
+            round_over: currentGameState.roundOver,
+          };
 
           const response: FrontendMessage = {
             type: 'reset_result',
-            observation,
+            state: statePayload,
           };
           dc.send(JSON.stringify(response));
           console.log("RLAgentController: Sent 'reset_result'.");

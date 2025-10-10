@@ -58,44 +58,19 @@ export class GameEngine {
         console.log(`Loaded generated character ${characterData.theme} for player ${targetPlayerId}`);
     }
 
-    public applyExternalAction(actionId: number): void {
-        const player = this.gameState[this.aiPlayerId === this.gameState.player1.id ? 'player1' : 'player2'];
-        const actionString = mapActionIdToString(actionId);
-
-        // Update last input action for the AI-controlled player
-        this.lastInputActions[this.aiPlayerId] = actionString;
-
-        // Apply the action to the player (simplified for now, actual game logic would be here)
-        // This part needs to be aligned with the Player class methods as per 구현_알고리즘_명세서.md
-        switch (actionString) {
-            case 'move_forward':
-                player.position.x = player.position.x.add(FixedPoint.fromFloat(0.1)); // Example movement
-                break;
-            case 'move_backward':
-                player.position.x = player.position.x.subtract(FixedPoint.fromFloat(0.1)); // Example movement
-                break;
-            case 'jump':
-                // Simplified jump
-                if (player.isGrounded) {
-                    player.velocity.y = FixedPoint.fromFloat(0.5);
-                    player.isGrounded = false;
-                }
-                break;
-            case 'light_punch':
-                // Trigger light punch animation/logic
-                player.action = 'attacking';
-                break;
-            case 'heavy_kick':
-                // Trigger heavy kick animation/logic
-                player.action = 'attacking';
-                break;
-            case 'guard':
-                player.action = 'guarding';
-                break;
-            case 'idle':
-            default:
-                player.action = 'idle';
-                break;
+    public applyExternalAction(targetPlayerId: string, action: number): void {
+        const player = targetPlayerId === this.gameState.player1.id ? this.gameState.player1 : this.gameState.player2;
+        // Apply action to the player
+        // This will involve mapping the action number to specific game inputs
+        // For now, let's assume action directly maps to player's action state
+        switch (action) {
+            case 0: player.action = 'idle'; break;
+            case 1: player.action = 'moving'; player.velocity.x = FixedPoint.fromInt(5); break; // Move right
+            case 2: player.action = 'moving'; player.velocity.x = FixedPoint.fromInt(-5); break; // Move left
+            case 3: player.action = 'jumping'; player.velocity.y = FixedPoint.fromInt(-10); break; // Jump
+            case 4: player.action = 'attacking'; break;
+            case 5: player.action = 'guarding'; break;
+            default: player.action = 'idle'; break;
         }
     }
 

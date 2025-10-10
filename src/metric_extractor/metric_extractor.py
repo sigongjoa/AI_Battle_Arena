@@ -5,6 +5,7 @@ import gzip
 import pandas as pd
 import numpy as np
 import time
+from typing import Optional # Import Optional
 from src.metric_extractor.db_manager import DBManager
 from src.utils.event_types import *
 
@@ -53,7 +54,7 @@ class MetricExtractor:
         
         print(f"MetricExtractor: Finished extracting and storing metrics for session {session_id}")
 
-    def _parse_session_id_from_filepath(self, filepath: str) -> str | None:
+    def _parse_session_id_from_filepath(self, filepath: str) -> Optional[str]: # Changed str | None to Optional[str]
         # Expected format: session_YYYYMMDD_HHMMSS_UUID.jsonl.gz
         filename = os.path.basename(filepath)
         print(f"DEBUG: Filename in _parse_session_id_from_filepath: {filename}")

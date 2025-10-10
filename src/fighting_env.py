@@ -1,8 +1,10 @@
 import gymnasium as gym
+from gymnasium import spaces # Ensure spaces is imported
 import numpy as np
 import queue
 import threading
 import logging
+from typing import Tuple # Import Tuple
 
 from src.webrtc_client import WebRTCClient
 from src.rhythm_analyzer import RhythmAnalyzer
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 class FightingEnv(gym.Env):
     """
     A Gymnasium environment that communicates with a browser-based game
-    client via WebRTC.
+    client via WebRTC. The reward calculation is now handled on the backend.
     """
 
     metadata = {"render_modes": ["human"], "render_fps": 60}
@@ -23,23 +25,16 @@ class FightingEnv(gym.Env):
     def __init__(self, backend_peer_id: str, render_mode=None, test_mode: bool = False):
         super().__init__()
         self.test_mode = test_mode
+        self.prev_state = {}
 
-        # Initialize RhythmAnalyzers for each player
-        # window_size: 600 actions (approx 10 seconds at 60 FPS)
-        # fps: 60
-        self.player1_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
-        self.player2_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
+        # Action Space: Tuple of two discrete actions (one for each player)
+        # Each action: 0:Idle, 1:MoveFwd, 2:MoveBwd, 3:Jump, 4:Attack1, 5:Attack2
+        self.action_space = gym.spaces.Tuple((spaces.Discrete(6), spaces.Discrete(6)))
 
-        # Define action and observation spaces based on the spec
-        # Action: 0:Idle, 1:MoveFwd, 2:MoveBwd, 3:Jump, 4:Attack1, 5:Attack2
-        self.action_space = gym.spaces.Discrete(6)
-
-        # Observation: [p1_x, p1_y, p1_hp, p1_state, p2_x, p2_y, p2_hp, p2_state] +
-        # [p1_rhythm_metrics(4), p2_rhythm_metrics(4)]
-        # The original 8 features from the game state are augmented with 8 features
-        # from the RhythmAnalyzer (4 for each player).
+        # Observation: [p1_x, p1_y, p1_hp, p1_state, p2_x, p2_y, p2_hp, p2_state]
+        # Rhythm analysis features are removed for now to simplify the refactoring.
         self.observation_space = gym.spaces.Box(
-            low=0.0, high=1.0, shape=(16,), dtype=np.float32
+            low=0.0, high=1.0, shape=(8,), dtype=np.float32
         )
 
         self.action_queue = queue.Queue()
@@ -53,7 +48,7 @@ class FightingEnv(gym.Env):
         self.webrtc_thread = threading.Thread(
             target=self.webrtc_client.run,
             args=(backend_peer_id,),
-            daemon=True,  # Daemon threads exit when the main program exits
+            daemon=True,
         )
         self.webrtc_thread.start()
 
@@ -65,7 +60,6 @@ class FightingEnv(gym.Env):
         """
         logger.info("Waiting for frontend connection...")
         try:
-            # Wait for 60 seconds for the connection to be ready
             result = self.result_queue.get(timeout=60)
             if result.get("type") == "connection_ready":
                 logger.info("Frontend connection established successfully.")
@@ -77,43 +71,81 @@ class FightingEnv(gym.Env):
             logger.error("Timeout: Frontend did not connect within 60 seconds.")
             raise ConnectionAbortedError("Frontend connection timed out.")
 
-    def step(self, action):
-        logger.info("Putting 'action' on action queue.")
-        self.action_queue.put({"type": "action", "action": int(action)})
-        try:
-            result = self.result_queue.get(timeout=10)  # 10-second timeout for step
+    def _calculate_reward(self, prev_state, current_state, p1_action):
+        """
+        Calculates the reward based on the change between the previous and current state.
+        """
+        if not prev_state:
+            return 0.0
 
-            if result.get("type") != "step_result":
+        reward = 0.0
+
+        # Reward scales (can be tuned)
+        DAMAGE_REWARD_SCALE = 1.0
+        DAMAGE_PENALTY_SCALE = 1.0
+        WIN_REWARD = 100.0
+        LOSS_PENALTY = -100.0
+        DISTANCE_CLOSER_REWARD_SCALE = 0.01
+        DISTANCE_FURTHER_PENALTY_SCALE = 0.005
+        IDLE_PENALTY = -0.01
+
+        # 1. Damage dealt/taken reward
+        damage_dealt = prev_state["p2_health"] - current_state["p2_health"]
+        if damage_dealt > 0:
+            reward += damage_dealt * DAMAGE_REWARD_SCALE
+
+        damage_taken = prev_state["p1_health"] - current_state["p1_health"]
+        if damage_taken > 0:
+            reward -= damage_taken * DAMAGE_PENALTY_SCALE
+
+        # 2. Distance reward/penalty
+        prev_distance = abs(prev_state["p1_pos_x"] - prev_state["p2_pos_x"])
+        current_distance = abs(current_state["p1_pos_x"] - current_state["p2_pos_x"])
+        distance_change = prev_distance - current_distance  # Positive if distance decreased
+        if distance_change > 0:  # Moving closer
+            reward += distance_change * DISTANCE_CLOSER_REWARD_SCALE
+        elif distance_change < 0:  # Moving further
+            reward -= abs(distance_change) * DISTANCE_FURTHER_PENALTY_SCALE
+
+        # 3. Idle penalty for player 1
+        if p1_action == 0:  # Assuming 0 is the idle action
+            reward += IDLE_PENALTY
+
+        # 4. Win/Loss reward
+        if current_state["round_over"]:
+            if current_state["p1_health"] > current_state["p2_health"]:
+                reward += WIN_REWARD
+            elif current_state["p1_health"] < current_state["p2_health"]:
+                reward += LOSS_PENALTY
+        
+        return reward
+
+    def step(self, action: Tuple[int, int]):
+        p1_action, p2_action = action
+        self.action_queue.put({"type": "action", "p1Action": int(p1_action), "p2Action": int(p2_action)})
+        try:
+            result = self.result_queue.get(timeout=10)
+
+            if result.get("type") != "action_result":
                 raise ConnectionError("Unexpected message type received for step.")
 
-            base_obs = np.array(result["observation"], dtype=np.float32)
-            reward = result["reward"]
-            terminated = result["done"]
-            truncated = False  # Not used in this environment
+            # The result now contains raw state data
+            current_state = result["state"]
+            obs = np.array(current_state["observation"], dtype=np.float32)
+            terminated = current_state["round_over"]
+            truncated = False
             info = {}
 
-            # Extract actions and current frame from the result
-            p1_action_str = result.get("p1_action_str")
-            p2_action_str = result.get("p2_action_str")
-            current_frame = result.get("current_frame")
+            # Calculate reward on the backend
+            reward = self._calculate_reward(self.prev_state, current_state, p1_action)
 
-            if p1_action_str and current_frame is not None:
-                self.player1_rhythm_analyzer.add_action(p1_action_str, current_frame)
-            if p2_action_str and current_frame is not None:
-                self.player2_rhythm_analyzer.add_action(p2_action_str, current_frame)
-
-            # Get rhythm feature vectors
-            p1_rhythm_vec = self.player1_rhythm_analyzer.get_feature_vector()
-            p2_rhythm_vec = self.player2_rhythm_analyzer.get_feature_vector()
-
-            # Concatenate rhythm vectors with base observation
-            obs = np.concatenate((base_obs, p1_rhythm_vec, p2_rhythm_vec))
+            # Update previous state
+            self.prev_state = current_state
 
             return obs, reward, terminated, truncated, info
 
         except queue.Empty:
-            logger.error("Timeout: Did not receive step_result from frontend in time.")
-            # On timeout, we treat it as a terminal condition
+            logger.error("Timeout: Did not receive action_result from frontend in time.")
             return (
                 np.zeros(self.observation_space.shape, dtype=np.float32),
                 0,
@@ -125,32 +157,25 @@ class FightingEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
-        # Re-initialize RhythmAnalyzers on reset
-        self.player1_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
-        self.player2_rhythm_analyzer = RhythmAnalyzer(window_size=600, fps=60)
-
-        logger.info("Putting 'reset' on action queue.")
         self.action_queue.put({"type": "reset"})
         try:
-            result = self.result_queue.get(timeout=10)  # 10-second timeout for reset
+            result = self.result_queue.get(timeout=10)
 
             if result.get("type") != "reset_result":
                 raise ConnectionError("Unexpected message type received for reset.")
 
-            base_obs = np.array(result["observation"], dtype=np.float32)
+            # Store the initial state
+            initial_state = result["state"]
+            self.prev_state = initial_state
+            
+            obs = np.array(initial_state["observation"], dtype=np.float32)
             info = {}
-
-            # Get rhythm feature vectors
-            p1_rhythm_vec = self.player1_rhythm_analyzer.get_feature_vector()
-            p2_rhythm_vec = self.player2_rhythm_analyzer.get_feature_vector()
-
-            # Concatenate rhythm vectors with base observation
-            obs = np.concatenate((base_obs, p1_rhythm_vec, p2_rhythm_vec))
 
             return obs, info
 
         except queue.Empty:
             logger.error("Timeout: Did not receive reset_result from frontend in time.")
+            self.prev_state = {}
             return np.zeros(self.observation_space.shape, dtype=np.float32), {
                 "timeout": True
             }

@@ -1,4 +1,5 @@
-from typing import Tuplefrom src.player import Player
+from typing import Tuple
+from src.player import Player
 
 
 class CollisionManager:
