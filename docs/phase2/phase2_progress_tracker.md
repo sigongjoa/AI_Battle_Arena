@@ -63,3 +63,63 @@
     1.  GitHub Pages를 통해 배포된 대시보드 페이지가 존재한다.
     2.  페이지에 접속하면 특정 학습 세션의 보상 곡선, 승률, 에피소드 길이 그래프가 시각적으로 표시된다.
     3.  표시되는 데이터는 실제 TensorBoard 로그를 기반으로 한다.
+
+---
+
+## 5. 사용자 수행 필요 사항 (User Action Items)
+
+현재까지 구현된 사항들을 바탕으로, 다음 단계 진행을 위해 사용자께서 수행해주셔야 할 작업들입니다.
+
+### 5.1. CI/CD를 위한 GitHub Secrets 설정
+
+`deploy-to-training-server` GitHub Actions Job이 정상적으로 동작하려면, 훈련 서버 접속을 위한 SSH 자격 증명을 GitHub Secrets에 설정해야 합니다.
+
+*   **수행 방법:**
+    1.  GitHub 저장소로 이동합니다.
+    2.  `Settings` 탭을 클릭합니다.
+    3.  좌측 메뉴에서 `Secrets and variables` -> `Actions`를 선택합니다.
+    4.  `New repository secret` 버튼을 클릭하여 다음 세 가지 Secret을 추가합니다.
+        *   `SSH_USERNAME`: 훈련 서버에 로그인할 사용자 이름 (예: `ubuntu`)
+        *   `SSH_HOST`: 훈련 서버의 IP 주소 또는 호스트 이름 (예: `192.168.1.100` 또는 `your-server.com`)
+        *   `SSH_PRIVATE_KEY`: 훈련 서버에 접속할 수 있는 SSH Private Key 내용 전체 (-----BEGIN OPENSSH PRIVATE KEY----- 부터 -----END OPENSSH PRIVATE KEY----- 까지 모두 포함)
+
+### 5.2. `phase2-ci-cd.yml`의 배포 및 훈련 트리거 명령 구현
+
+현재 `.github/workflows/phase2-ci-cd.yml` 파일의 `deploy-to-training-server` Job에는 배포 및 훈련 트리거 명령이 주석 처리된 플레이스홀더로 존재합니다. 이를 실제 서버 환경에 맞게 수정해야 합니다.
+
+*   **수행 방법:**
+    1.  `.github/workflows/phase2-ci-cd.yml` 파일을 엽니다.
+    2.  `Deploy and Trigger Training` 스텝 아래의 주석 처리된 `scp` 및 `ssh` 예시 명령을 참고하여, 실제 서버에 파일을 복사하고 `train_rl_agent.py` 스크립트를 실행하는 명령으로 대체합니다.
+        *   **예시:**
+            ```yaml
+            - name: Deploy and Trigger Training
+              run: |
+                scp -o StrictHostKeyChecking=no -r . ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/path/to/your/project
+                ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "cd /path/to/your/project && python train_rl_agent.py"
+            ```
+        *   `/path/to/your/project`는 훈련 서버에 프로젝트 파일이 위치할 실제 경로로 변경해야 합니다.
+
+### 5.3. 프론트엔드 로컬 테스트
+
+`RLDemoPage` 및 `RLDashboardPage`의 기본 UI가 구현되었으며, 프론트엔드 내비게이션에 통합되었습니다. 로컬에서 프론트엔드 애플리케이션을 실행하여 UI가 예상대로 표시되는지 확인해주세요.
+
+*   **수행 방법:**
+    1.  터미널에서 `AI_Battle_Arena/arcade-clash` 디렉토리로 이동합니다.
+    2.  `npm install`을 실행하여 의존성을 설치합니다 (최초 1회).
+    3.  `npm start`를 실행하여 개발 서버를 시작합니다.
+    4.  브라우저에서 애플리케이션에 접속하여 메인 메뉴에서 `RL Demo` 및 `RL Dashboard` 페이지로 이동하여 UI를 확인합니다.
+
+### 5.4. 백엔드 로컬 테스트 (훈련 및 평가)
+
+정책 관리 시스템과 `evaluate_agent.py` 스크립트가 구현되었습니다. 로컬에서 훈련 및 평가 스크립트를 실행하여 정상 동작하는지 확인해주세요.
+
+*   **수행 방법:**
+    1.  `config.yaml` 파일을 열어 `rl_training.active_policy` 값을 `PPO` 또는 `A2C`로 변경하며 훈련을 시작합니다.
+    2.  터미널에서 `AI_Battle_Arena` 프로젝트 루트 디렉토리로 이동합니다.
+    3.  `python train_rl_agent.py`를 실행하여 훈련이 시작되는지 확인합니다.
+    4.  훈련 완료 후 생성된 모델 파일 (`./models/ppo_fighting_env_multi_agent/ppo_final_model.zip` 등)을 사용하여 `python evaluate_agent.py --model_path <모델_경로> --policy_name <정책_이름>` 명령으로 평가를 실행하고 결과가 출력되는지 확인합니다.
+
+### 5.5. 피드백 제공
+
+위 단계를 수행하면서 발견된 문제점이나 추가적인 개선 사항에 대한 피드백을 제공해주시면 감사하겠습니다.
+
