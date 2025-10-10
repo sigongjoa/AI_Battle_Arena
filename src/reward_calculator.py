@@ -82,7 +82,7 @@ class RewardCalculator:
         if distance_change > 0:
             return distance_change * self.distance_closer_reward_scale
         elif distance_change < 0:
-            return abs(distance_change) * self.distance_further_penalty_scale
+            return -abs(distance_change) * self.distance_further_penalty_scale
         return 0.0
 
     def _health_difference_reward(
