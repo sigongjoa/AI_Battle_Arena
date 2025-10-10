@@ -54,15 +54,14 @@ The visualization will aim to demonstrate:
 ## 6. System Flow
 
 1.  **RL Agent Training (Backend):** The `train_rl_agent.py` script trains RL policies, saving models and generating training logs (which contain episode metrics).
-2.  **Simulation Manager (Backend):** For in-game visualization, a simulation manager (e.g., `src/simulation/simulation_manager.py`) will load a trained policy and run game simulations.
-3.  **Data Collection (Backend):** During training and simulation, relevant data (game states, actions, rewards) is collected and stored (e.g., in logs, database).
-4.  **Backend API:** A FastAPI backend will expose API endpoints:
-    *   To serve trained policy models to the simulation manager.
-    *   To provide historical training metrics for the dashboard.
-    *   To establish real-time communication (WebRTC/WebSockets) for live game state streaming to the demo page.
-5.  **Frontend (React Application):**
-    *   `RLDashboardPage.tsx`: Fetches historical metrics from the backend API and renders them using a charting library.
-    *   `RLDemoPage.tsx`: Establishes a real-time connection with the backend simulation manager, receives game state updates, and renders the game visually. It also sends agent actions (if interactive demo) or receives policy-generated actions.
+2.  **Simulation Data Generation (Backend):** For visualization, game simulations will be run with trained policies. During these simulations, all relevant data (game states, actions, rewards, observations) will be collected and saved as **static data files** (e.g., JSON, CSV, or a custom log format). This data will represent pre-recorded "replays" or aggregated metrics.
+3.  **Frontend (React Application - Static Data Driven):**
+    *   The frontend application will be designed to consume these **static data files directly**. It will parse and interpret the pre-recorded simulation data and aggregated metrics.
+    *   `RLDashboardPage.tsx`: Will load and render historical metrics from static data files using a charting library.
+    *   `RLDemoPage.tsx`: Will load pre-recorded game states and actions from static data files and render the game visually, effectively "replaying" a simulation without a live backend connection.
+4.  **CI/CD for Deployment:** The CI/CD pipeline (GitHub Actions) will be responsible for:
+    *   Building the frontend application into static assets.
+    *   Deploying these static assets (including the visualization page and its associated static data files) to a static hosting service (e.g., GitHub Pages). This ensures the visualization is always up-to-date with the latest generated data and code.
 
 ## 7. Implementation Considerations
 
