@@ -10,6 +10,7 @@ from stable_baselines3.common.monitor import Monitor
 from src.fighting_env import FightingEnv
 from src.simulation.simulation_manager import SimulationManager
 from src.rl_policy_manager import PolicyManager # Import PolicyManager
+from src.wrappers import FlattenActionSpaceWrapper # Import the custom wrapper
 
 # Configuration
 LOG_DIR = "./logs/ppo_fighting_env_multi_agent"
@@ -39,12 +40,16 @@ def train_agent(total_timesteps: int = None, seed: int = None, backend_peer_id: 
 
     # Create training environment
     # Monitor wrapper is important for EvalCallback to log episode stats
-    env = Monitor(FightingEnv(backend_peer_id=backend_peer_id), LOG_DIR)
+    env = FightingEnv(backend_peer_id=backend_peer_id)
+    env = FlattenActionSpaceWrapper(env)
+    env = Monitor(env, LOG_DIR)
     # Vectorized environments are often used for faster training
-    vec_env = make_vec_env(lambda: env, n_envs=training_config['n_envs']) # Use n_envs from config
+    vec_env = make_vec_env(lambda: env, n_envs=training_config['n_envs'])
 
     # Create evaluation environment
-    eval_env = Monitor(FightingEnv(backend_peer_id=backend_peer_id), LOG_DIR)
+    eval_env = FightingEnv(backend_peer_id=backend_peer_id)
+    eval_env = FlattenActionSpaceWrapper(eval_env)
+    eval_env = Monitor(eval_env, LOG_DIR)
 
     # Callback for evaluating and saving the best model
     # Stop training if the mean reward reaches a certain threshold
