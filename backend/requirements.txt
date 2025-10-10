@@ -13,3 +13,4 @@ aiohttp>=3.9.5
 scipy
 requests
 pytest-mock
+pyyaml

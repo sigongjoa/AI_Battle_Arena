@@ -1,12 +1,21 @@
-# Configuration for Phase 7: AI-driven QA and Game Feel Analysis
+# RL Agent Training Configuration
 
-simulation:
-  human_error:
-    reaction_time_mean: 5 # frames
-    reaction_time_std: 2 # frames
-    mistake_probability: 0.05 # 5% chance of input mistake
-    drop_probability: 0.02 # 2% chance of input drop
-  network:
-    latency_mean: 50 # ms
-    latency_std: 10 # ms
-    packet_loss_probability: 0.01 # 1% chance of packet loss
+ppo_config:
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  n_epochs: 10
+  # Add more PPO specific hyperparameters as needed
+
+training_config:
+  total_timesteps: 1_000_000
+  eval_freq: 10000
+  n_eval_episodes: 5
+  n_envs: 1 # Number of parallel environments
+  # reward_threshold: 200 # Uncomment to enable StopTrainingOnRewardThreshold
