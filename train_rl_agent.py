@@ -3,13 +3,13 @@ import numpy as np
 import os
 import time
 import yaml # Import yaml
-from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnRewardThreshold
 from stable_baselines3.common.monitor import Monitor
 
 from src.fighting_env import FightingEnv
 from src.simulation.simulation_manager import SimulationManager
+from src.rl_policy_manager import PolicyManager # Import PolicyManager
 
 # Configuration
 LOG_DIR = "./logs/ppo_fighting_env_multi_agent"
@@ -25,7 +25,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 with open(CONFIG_PATH, 'r') as f:
     config = yaml.safe_load(f)
 
-ppo_config = config['ppo_config']
+rl_training_config = config['rl_training']
 training_config = config['training_config']
 
 def train_agent(total_timesteps: int = None, seed: int = None, backend_peer_id: str = "backend_peer_id_for_train"):
@@ -59,34 +59,20 @@ def train_agent(total_timesteps: int = None, seed: int = None, backend_peer_id: 
                                  # callback_on_new_best=callback_on_best,
                                  verbose=1)
 
-    # Initialize the PPO model
-    model = PPO("MlpPolicy", vec_env, verbose=1, tensorboard_log=LOG_DIR, seed=sim_manager.seed_value, **ppo_config) # Pass ppo_config
+    # Initialize PolicyManager and create the RL model
+    active_policy_name = rl_training_config['active_policy']
+    policy_config = rl_training_config['policies'][active_policy_name]['hyperparameters']
+    
+    policy_manager = PolicyManager(active_policy_name, vec_env, policy_config, seed=sim_manager.seed_value)
+    model = policy_manager.get_current_policy()
 
-
-    print(f"Starting training for {total_timesteps} timesteps...")
+    print(f"Starting training for {total_timesteps} timesteps using {active_policy_name} policy...")
     try:
         model.learn(total_timesteps=total_timesteps, callback=eval_callback)
     except KeyboardInterrupt:
         print("Training interrupted by user.")
 
     # Save the final model
-    final_model_path = os.path.join(MODEL_DIR, "ppo_final_model.zip")
+    final_model_path = os.path.join(MODEL_DIR, f"{active_policy_name.lower()}_final_model.zip")
     model.save(final_model_path)
     print(f"Final model saved to {final_model_path}")
-
-    # Save episode logs (if any were collected by SimulationManager directly)
-    sim_manager.save_logs()
-
-    print("Training complete.")
-
-if __name__ == "__main__":
-    # You can pass arguments for total_timesteps, seed, and backend_peer_id here
-    # For example: python train_rl_agent.py --total_timesteps 500000 --seed 42
-    import argparse
-    parser = argparse.ArgumentParser(description="Train an RL agent.")
-    parser.add_argument("--total_timesteps", type=int, default=1_000_000, help="Total timesteps for training.")
-    parser.add_argument("--seed", type=int, help="Random seed for reproducibility.")
-    parser.add_argument("--backend_peer_id", type=str, default="backend_peer_id_for_train", help="Peer ID of the backend for WebRTC connection.")
-    args = parser.parse_args()
-
-    train_agent(total_timesteps=args.total_timesteps, seed=args.seed, backend_peer_id=args.backend_peer_id)
