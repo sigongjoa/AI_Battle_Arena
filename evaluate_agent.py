@@ -22,13 +22,14 @@ def evaluate_agent(
     render: bool = False,
     seed: int = None,
     backend_peer_id: str = "backend_peer_id_for_eval",
+    headless: bool = False,
 ):
     # Initialize SimulationManager for consistent seeding
     sim_manager = SimulationManager(seed=seed)
 
     # Create evaluation environment
     # Monitor wrapper is important for logging episode stats
-    eval_env = Monitor(FightingEnv(backend_peer_id=backend_peer_id), LOG_DIR)
+    eval_env = Monitor(FightingEnv(backend_peer_id=backend_peer_id, headless_mode=headless), LOG_DIR)
 
     # Load the model based on policy_name
     if policy_name == "PPO":
@@ -89,6 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--render", action="store_true", help="Render the environment during evaluation.")
     parser.add_argument("--seed", type=int, help="Random seed for reproducibility.")
     parser.add_argument("--backend_peer_id", type=str, default="backend_peer_id_for_eval", help="Peer ID of the backend for WebRTC connection.")
+    parser.add_argument("--headless", action="store_true", help="Run the environment in headless mode (without WebRTC frontend).")
     args = parser.parse_args()
 
     evaluate_agent(
@@ -98,4 +100,5 @@ if __name__ == "__main__":
         render=args.render,
         seed=args.seed,
         backend_peer_id=args.backend_peer_id,
+        headless=args.headless,
     )

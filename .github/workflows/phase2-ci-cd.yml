@@ -1,55 +1,75 @@
-name: Phase 2 CI/CD for RL Training
+name: Phase 2 - RL Training CI/CD (Revised)
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
-  build-and-test:
+  # --- CI: 코드 무결성 검사 ---
+  ci-backend:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-
-    - name: Install Python Dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r backend/requirements.txt
-        pip install pytest
-        pip install pytest-mock
+        pip install pytest flake8 stable-baselines3 gymnasium
+    - name: Lint with flake8
+      run: flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+    - name: Test with pytest
+      run: PYTHONPATH=. pytest tests/
 
-    - name: Run Pytest
-      run: |
-        CUDA_VISIBLE_DEVICES="" PYTHONPATH=. pytest
-
-  deploy-frontend:
-    needs: build-and-test
+  # --- CD: 강화학습 모델 평가 및 결과물 관리 자동화 ---
+  cd-evaluation-and-archive:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [ci-backend]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
-        node-version: '20'
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install stable-baselines3 gymnasium
+    
+    # Placeholder: Download a pre-trained model for evaluation
+    # In a real scenario, this would be the model from a previous successful training run
+    - name: Download Placeholder Model
+      run: |
+        mkdir -p models/ppo_fighting_env_multi_agent
+        # For demonstration, we'll create a dummy file.
+        # In a real scenario, you'd download a .zip model file.
+        echo "dummy_model_content" > models/ppo_fighting_env_multi_agent/best_model.zip
+        echo "dummy_model_content" > models/ppo_fighting_env_multi_agent/ppo_final_model.zip
+      
+    # 1. 학습된 정책으로 오프라인 게임 진행 (평가)
+    - name: Run Offline Game with Policy (Evaluation)
+      run: |
+        PYTHONPATH=. python evaluate_agent.py --model_path models/ppo_fighting_env_multi_agent/best_model.zip --policy_name PPO --num_episodes 5 --render False --backend_peer_id "github_actions_eval" --headless
+      # Note: The evaluate_agent.py script needs to be robust enough to run without a live frontend connection for this to work.
+      # It might require modifications to FightingEnv to handle a 'headless' or 'mock' frontend connection.
 
-    - name: Install Frontend Dependencies
-      run: npm install
-      working-directory: ./arcade-clash
-
-    - name: Build Frontend
-      run: npm run build
-      working-directory: ./arcade-clash
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      if: github.ref == 'refs/heads/master'
+    # 2. 결과물 아카이빙 (학습 모델 파일)
+    - name: Archive Trained Models
+      uses: actions/upload-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./arcade-clash/dist
+        name: trained-models
+        path: models/ppo_fighting_env_multi_agent/*.zip
+
+    # 3. 결과물 아카이빙 (TensorBoard 로그)
+    - name: Archive TensorBoard Logs
+      uses: actions/upload-artifact@v3
+      with:
+        name: tensorboard-logs
+        path: logs/ppo_fighting_env_multi_agent/

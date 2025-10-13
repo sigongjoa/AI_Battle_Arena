@@ -23,9 +23,10 @@ class FightingEnv(gym.Env):
 
     metadata = {"render_modes": ["human"], "render_fps": 60}
 
-    def __init__(self, backend_peer_id: str, render_mode=None, test_mode: bool = False):
+    def __init__(self, backend_peer_id: str, render_mode=None, test_mode: bool = False, headless_mode: bool = False):
         super().__init__()
         self.test_mode = test_mode
+        self.headless_mode = headless_mode
         self.prev_state = {}
 
         # Action Space: Tuple of two discrete actions (one for each player)
@@ -41,24 +42,33 @@ class FightingEnv(gym.Env):
         self.action_queue = queue.Queue()
         self.result_queue = queue.Queue()
 
-        self.webrtc_client = WebRTCClient(
-            self.action_queue, self.result_queue, test_mode=self.test_mode
-        )
-
-        # Run the WebRTC client in a separate thread
-        self.webrtc_thread = threading.Thread(
-            target=self.webrtc_client.run,
-            args=(backend_peer_id,),
-            daemon=True,
-        )
-        self.webrtc_thread.start()
-
-        self._wait_for_connection()
+        if self.headless_mode:
+            # Use a mock client for headless mode
+            from src.mock_game_client import MockGameClient
+            self.game_client = MockGameClient(self.action_queue, self.result_queue)
+            self.game_client_thread = threading.Thread(
+                target=self.game_client.run,
+                daemon=True,
+            )
+            self.game_client_thread.start()
+            logger.info("FightingEnv running in headless mode with MockGameClient.")
+        else:
+            # Use WebRTC client for normal mode
+            self.game_client = WebRTCClient(
+                self.action_queue, self.result_queue, test_mode=self.test_mode
+            )
+            self.game_client_thread = threading.Thread(
+                target=self.game_client.run,
+                args=(backend_peer_id,),
+                daemon=True,
+            )
+            self.game_client_thread.start()
+            logger.info("FightingEnv running in normal mode with WebRTCClient.")
 
         # Instantiate RewardCalculator
         self.reward_calculator = RewardCalculator() # Using default values for now
 
-    def _wait_for_connection(self):
+    def wait_for_connection(self):
         """
         Waits for the 'connection_ready' message from the frontend.
         """
