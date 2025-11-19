@@ -42,16 +42,16 @@ class FightingEnv(gym.Env):
         self.action_queue = queue.Queue()
         self.result_queue = queue.Queue()
 
-        if self.headless_mode:
-            # Use a mock client for headless mode
+        if self.headless_mode or self.test_mode:
+            # Use a mock client for headless or test mode
+            # MockGameClient starts its own thread, so no need to create one
             from src.networking.mock_client import MockGameClient
             self.game_client = MockGameClient(self.action_queue, self.result_queue)
-            self.game_client_thread = threading.Thread(
-                target=self.game_client.run,
-                daemon=True,
-            )
-            self.game_client_thread.start()
-            logger.info("FightingEnv running in headless mode with MockGameClient.")
+            self.game_client_thread = None  # MockGameClient manages its own thread
+            if self.test_mode:
+                logger.info("FightingEnv running in test mode with MockGameClient.")
+            else:
+                logger.info("FightingEnv running in headless mode with MockGameClient.")
         else:
             # Use WebRTC client for normal mode
             self.game_client = WebRTCClient(
@@ -158,9 +158,21 @@ class FightingEnv(gym.Env):
             # Store the initial state
             initial_state = result["state"]
             self.prev_state = initial_state
-            
+
             obs = np.array(initial_state["observation"], dtype=np.float32)
-            info = {}
+
+            # Prepare info dict with game state information
+            info = {
+                'player_1_state': {
+                    'health': initial_state.get("p1_health", 1.0),
+                    'position': [initial_state.get("p1_pos_x", 0.2), initial_state.get("p1_pos_y", 0.0)]
+                },
+                'player_2_state': {
+                    'health': initial_state.get("p2_health", 1.0),
+                    'position': [initial_state.get("p2_pos_x", 0.8), initial_state.get("p2_pos_y", 0.0)]
+                },
+                'round_over': initial_state.get("round_over", False)
+            }
 
             return obs, info
 
