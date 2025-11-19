@@ -27,8 +27,10 @@ export default defineConfig({
     baseURL: 'http://localhost:5174',
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
-    /* Screenshot on failure */
+    /* Screenshot on every test for documentation */
     screenshot: 'only-on-failure',
+    /* Video on failure for debugging */
+    video: 'retain-on-failure',
   },
 
   /* Configure projects for major browsers */

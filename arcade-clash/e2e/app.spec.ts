@@ -1,15 +1,13 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
 
-test.describe('AI Battle Arena - E2E Tests', () => {
+test.describe('AI Battle Arena - Main Application', () => {
   test('should load the application', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Arcade Clash|AI Battle Arena/i);
 
     // Wait for page to be interactive
     await page.waitForLoadState('domcontentloaded');
-
-    // Capture screenshot
-    await page.screenshot({ path: '../test_reports/screenshots/01_main_page.png' });
   });
 
   test('should have root element visible', async ({ page }) => {
@@ -19,8 +17,6 @@ test.describe('AI Battle Arena - E2E Tests', () => {
     // Check if root element exists and is visible
     const root = page.locator('#root');
     await expect(root).toBeVisible();
-
-    await page.screenshot({ path: '../test_reports/screenshots/02_root_visible.png' });
   });
 
   test('should render game interface', async ({ page }) => {
@@ -33,8 +29,6 @@ test.describe('AI Battle Arena - E2E Tests', () => {
 
     // Page should have at least some UI elements
     expect(buttonCount).toBeGreaterThanOrEqual(0);
-
-    await page.screenshot({ path: '../test_reports/screenshots/03_game_interface.png' });
   });
 });
 

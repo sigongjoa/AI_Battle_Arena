@@ -1,0 +1,170 @@
+<testsuites id="" name="" tests="39" failures="0" skipped="0" errors="0" time="96.2978">
+<testsuite name="app.spec.ts" timestamp="2025-11-19T17:15:09.901Z" hostname="chromium" tests="13" failures="0" skipped="0" time="25.446" errors="0">
+<testcase name="AI Battle Arena - Main Application › should load the application" classname="app.spec.ts" time="3.581">
+</testcase>
+<testcase name="AI Battle Arena - Main Application › should have root element visible" classname="app.spec.ts" time="1.946">
+</testcase>
+<testcase name="AI Battle Arena - Main Application › should render game interface" classname="app.spec.ts" time="2.04">
+</testcase>
+<testcase name="AI Battle Arena - Performance › should load within acceptable time" classname="app.spec.ts" time="1.196">
+<system-out>
+<![CDATA[Page load time: 949ms
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Performance › should have no critical console errors on load" classname="app.spec.ts" time="1.733">
+<system-out>
+<![CDATA[Errors: 0, Warnings: 1
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Accessibility › should support basic keyboard interaction" classname="app.spec.ts" time="2.192">
+<system-out>
+<![CDATA[Focused element: {"tag":"BUTTON","id":"no-id"}
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Accessibility › should have readable text" classname="app.spec.ts" time="1.768">
+<system-out>
+<![CDATA[Page has text content: true
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on mobile viewport" classname="app.spec.ts" time="1.788">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on tablet viewport" classname="app.spec.ts" time="1.842">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on desktop viewport" classname="app.spec.ts" time="1.976">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should not have horizontal scroll on mobile" classname="app.spec.ts" time="1.82">
+<system-out>
+<![CDATA[Has horizontal scroll on mobile: false
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Error Handling › should handle network issues gracefully" classname="app.spec.ts" time="1.771">
+<system-out>
+<![CDATA[HTTP 500+ errors: 0
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Error Handling › should render even with missing assets" classname="app.spec.ts" time="1.793">
+<system-out>
+<![CDATA[404 errors: 0
+]]>
+</system-out>
+</testcase>
+</testsuite>
+<testsuite name="app.spec.ts" timestamp="2025-11-19T17:15:09.901Z" hostname="firefox" tests="13" failures="0" skipped="0" time="25.289" errors="0">
+<testcase name="AI Battle Arena - Main Application › should load the application" classname="app.spec.ts" time="2.346">
+</testcase>
+<testcase name="AI Battle Arena - Main Application › should have root element visible" classname="app.spec.ts" time="1.964">
+</testcase>
+<testcase name="AI Battle Arena - Main Application › should render game interface" classname="app.spec.ts" time="1.872">
+</testcase>
+<testcase name="AI Battle Arena - Performance › should load within acceptable time" classname="app.spec.ts" time="1.342">
+<system-out>
+<![CDATA[Page load time: 1145ms
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Performance › should have no critical console errors on load" classname="app.spec.ts" time="1.863">
+<system-out>
+<![CDATA[Errors: 2, Warnings: 1
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Accessibility › should support basic keyboard interaction" classname="app.spec.ts" time="1.928">
+<system-out>
+<![CDATA[Focused element: {"tag":"BUTTON","id":"no-id"}
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Accessibility › should have readable text" classname="app.spec.ts" time="1.982">
+<system-out>
+<![CDATA[Page has text content: true
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on mobile viewport" classname="app.spec.ts" time="2.088">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on tablet viewport" classname="app.spec.ts" time="2.067">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on desktop viewport" classname="app.spec.ts" time="2.071">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should not have horizontal scroll on mobile" classname="app.spec.ts" time="1.918">
+<system-out>
+<![CDATA[Has horizontal scroll on mobile: false
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Error Handling › should handle network issues gracefully" classname="app.spec.ts" time="1.925">
+<system-out>
+<![CDATA[HTTP 500+ errors: 0
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Error Handling › should render even with missing assets" classname="app.spec.ts" time="1.923">
+<system-out>
+<![CDATA[404 errors: 0
+]]>
+</system-out>
+</testcase>
+</testsuite>
+<testsuite name="app.spec.ts" timestamp="2025-11-19T17:15:09.901Z" hostname="webkit" tests="13" failures="0" skipped="0" time="26.718" errors="0">
+<testcase name="AI Battle Arena - Main Application › should load the application" classname="app.spec.ts" time="2.131">
+</testcase>
+<testcase name="AI Battle Arena - Main Application › should have root element visible" classname="app.spec.ts" time="2.156">
+</testcase>
+<testcase name="AI Battle Arena - Main Application › should render game interface" classname="app.spec.ts" time="2.033">
+</testcase>
+<testcase name="AI Battle Arena - Performance › should load within acceptable time" classname="app.spec.ts" time="1.425">
+<system-out>
+<![CDATA[Page load time: 1087ms
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Performance › should have no critical console errors on load" classname="app.spec.ts" time="1.963">
+<system-out>
+<![CDATA[Errors: 1, Warnings: 1
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Accessibility › should support basic keyboard interaction" classname="app.spec.ts" time="2.011">
+<system-out>
+<![CDATA[Focused element: {"tag":"BUTTON","id":"no-id"}
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Accessibility › should have readable text" classname="app.spec.ts" time="2.005">
+<system-out>
+<![CDATA[Page has text content: true
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on mobile viewport" classname="app.spec.ts" time="1.926">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on tablet viewport" classname="app.spec.ts" time="2.098">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should display on desktop viewport" classname="app.spec.ts" time="2.467">
+</testcase>
+<testcase name="AI Battle Arena - Responsive Design › should not have horizontal scroll on mobile" classname="app.spec.ts" time="1.932">
+<system-out>
+<![CDATA[Has horizontal scroll on mobile: false
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Error Handling › should handle network issues gracefully" classname="app.spec.ts" time="2.018">
+<system-out>
+<![CDATA[HTTP 500+ errors: 0
+]]>
+</system-out>
+</testcase>
+<testcase name="AI Battle Arena - Error Handling › should render even with missing assets" classname="app.spec.ts" time="2.553">
+<system-out>
+<![CDATA[404 errors: 0
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>
