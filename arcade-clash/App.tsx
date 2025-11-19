@@ -30,6 +30,7 @@ export enum Screen {
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState(Screen.MainMenu);
+  const [currentSubScreen, setCurrentSubScreen] = useState<'main' | 'lobby'>('main');
   const [playerId] = useState<string>(`player_${Math.random().toString(36).substr(2, 9)}`);
   const [webRtcClient, setWebRtcClient] = useState<WebRtcClient | null>(null);
 
@@ -57,36 +58,37 @@ const App: React.FC = () => {
     }
   }, [gameMode, backendPeerId, playerId]);
 
-  // --- Screen Navigation Effect ---
-  useEffect(() => {
-    if (gameMode === 'rl_training') {
-      setCurrentScreen(Screen.GameScreen);
-    }
-  }, [gameMode]);
 
-  const navigateTo = (screen: Screen) => {
+
+  const navigateTo = (screen: Screen, subScreen?: 'main' | 'lobby') => {
     console.log(`Navigating from ${Screen[currentScreen]} to ${Screen[screen]}`);
     setCurrentScreen(screen);
+    if (subScreen) {
+      setCurrentSubScreen(subScreen);
+    }
   };
 
   const renderScreen = () => {
-    // In RL Training mode, we directly render the GameScreen.
-    if (gameMode === 'rl_training') {
-      return (
-        <GameScreen
-          webRtcClient={webRtcClient}
-          onNavigate={() => setCurrentScreen(Screen.MainMenu)}
-        />
-      );
-    }
+
 
     // The rest of the navigation for non-RL modes
     switch (currentScreen) {
       case Screen.MainMenu:
-        return <MainMenu onNavigate={navigateTo} />;
+        return <MainMenu
+          onNavigate={navigateTo}
+          currentSubScreen={currentSubScreen}
+          playerId=""
+          lobbyPlayers={[]}
+          matchRequest={null}
+          connectionStatus="Disconnected"
+          onJoinLobby={async () => false}
+          onRequestMatch={() => {}}
+          onAcceptMatch={() => {}}
+          onDeclineMatch={() => {}}
+        />;
       case Screen.GameScreen:
         console.warn("GameScreen in non-RL mode is not supported in this version.");
-        return <MainMenu onNavigate={navigateTo} />;
+        return <MainMenu onNavigate={navigateTo} currentSubScreen={currentSubScreen} />;
       case Screen.CharacterSelect:
         return <CharacterSelect onNavigate={navigateTo} characters={[]} />;
       case Screen.TrainingMode:

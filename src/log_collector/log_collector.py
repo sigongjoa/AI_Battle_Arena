@@ -2,8 +2,12 @@ import json
 import os
 import time
 import uuid
-import zlib # For compression
+import zlib  # For compression
 import gzip
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class LogCollector:
     def __init__(self, log_dir="logs/simulation_logs", compress_after_session=True):
@@ -20,12 +24,12 @@ class LogCollector:
         self.current_log_filepath = os.path.join(self.log_dir, f"session_{timestamp}_{self.current_session_id}.jsonl")
         self.current_log_file = open(self.current_log_filepath, 'w')
         self.log_event("SESSION_START", {"session_id": self.current_session_id, "timestamp": timestamp})
-        print(f"LogCollector: Started new session {self.current_session_id}, logging to {self.current_log_filepath}")
+        logger.info(f"Started new session {self.current_session_id}, logging to {self.current_log_filepath}")
         return self.current_session_id
 
     def log_event(self, event_type, data):
         if not self.current_log_file:
-            print("LogCollector: No active session. Call start_session() first.")
+            logger.warning("No active session. Call start_session() first.")
             return
 
         log_entry = {
@@ -40,7 +44,7 @@ class LogCollector:
         if self.current_log_file:
             self.log_event("SESSION_END", {"session_id": self.current_session_id, "timestamp": time.time()})
             self.current_log_file.close()
-            print(f"LogCollector: Ended session {self.current_session_id}.")
+            logger.info(f"Ended session {self.current_session_id}.")
             if self.compress_after_session:
                 self._compress_log_file(self.current_log_filepath)
             self.current_session_id = None
@@ -53,20 +57,20 @@ class LogCollector:
                 with gzip.open(filepath + '.gz', 'wb') as f_out:
                     f_out.writelines(f_in)
             os.remove(filepath)
-            print(f"LogCollector: Compressed {filepath} to {filepath}.gz and removed original.")
+            logger.info(f"Compressed {filepath} to {filepath}.gz and removed original.")
         except Exception as e:
-            print(f"LogCollector: Error compressing file {filepath}: {e}")
+            logger.error(f"Error compressing file {filepath}: {e}", exc_info=True)
 
     def save_replay_data(self, replay_data, replay_filename="replay.bin"):
         if not self.current_session_id:
-            print("LogCollector: No active session to associate replay data with.")
+            logger.warning("No active session to associate replay data with.")
             return
         
         replay_path = os.path.join(self.log_dir, f"replay_{self.current_session_id}_{replay_filename}")
         # For demonstration, replay_data is just a string. In real scenario, it would be binary.
         with open(replay_path, 'w') as f:
             f.write(replay_data)
-        print(f"LogCollector: Replay data saved for session {self.current_session_id} to {replay_path}")
+        logger.info(f"Replay data saved for session {self.current_session_id} to {replay_path}")
         self.log_event("REPLAY_SAVED", {"replay_path": replay_path})
 
 # Simple test for LogCollector

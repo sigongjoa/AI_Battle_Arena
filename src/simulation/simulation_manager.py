@@ -21,21 +21,14 @@ class SimulationManager:
         self.episode_logs = []
 
     def set_seed(self, seed: int = None):
-        """
-        시뮬레이션 전반에 걸쳐 랜덤 시드를 설정합니다.
-        """
-        if seed is not None:
-            self.seed_value = seed
-            np.random.seed(self.seed_value)
-            random.seed(self.seed_value)
-            # Further seeding for gym environments or game logic should be handled
-            # by the respective components, often by passing this seed value.
+        if seed is None:
+            # If no seed is provided, generate a random one
+            self.seed_value = random.randint(0, 2**32 - 1)
         else:
-            # If no seed is provided, generate a random one for reproducibility logging
-            self.seed_value = int(time.time() * 1000)
-            np.random.seed(self.seed_value)
-            random.seed(self.seed_value)
-        print(f"SimulationManager: Random seed set to {self.seed_value}")
+            self.seed_value = seed
+        
+        np.random.seed(self.seed_value)
+        random.seed(self.seed_value)
 
     def get_fixed_timestep(self) -> float:
         """

@@ -2,10 +2,15 @@
 import json
 import os
 import sys
+import logging
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Add project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -28,7 +33,7 @@ app.add_middleware(
 
 # API 라우터 포함
 app.include_router(api_routes.router, prefix="/api")
-print("API router included with prefix /api")
+logger.info("API router included with prefix /api")
 
 
 @app.websocket("/ws/{peer_id}")
@@ -37,12 +42,12 @@ async def websocket_endpoint(websocket: WebSocket, peer_id: str):
     origin = websocket.headers.get("origin")
     if origin is not None and origin != "http://localhost:5174":
         await websocket.close(code=1008)  # Policy Violation
-        print(f"[Signaling] DENIED: Unauthorized origin: {origin}")
+        logger.warning(f"[Signaling] DENIED: Unauthorized origin: {origin}")
         return
 
     await websocket.accept()
     connected_peers[peer_id] = websocket
-    print(f"[Signaling] Peer connected: {peer_id} (Total: {len(connected_peers)})")
+    logger.info(f"[Signaling] Peer connected: {peer_id} (Total: {len(connected_peers)})")
     try:
         while True:
             data = await websocket.receive_text()
@@ -57,16 +62,14 @@ async def websocket_endpoint(websocket: WebSocket, peer_id: str):
                     json.dumps(message)
                 )
             else:
-                print(f"[Signaling] Destination peer {destination_peer_id} not found.")
+                logger.debug(f"[Signaling] Destination peer {destination_peer_id} not found.")
 
     except WebSocketDisconnect:
         if peer_id in connected_peers:
             del connected_peers[peer_id]
-        print(
-            f"[Signaling] Peer disconnected: {peer_id} (Total: {len(connected_peers)})\n"
-        )
+        logger.info(f"[Signaling] Peer disconnected: {peer_id} (Total: {len(connected_peers)})")
     except Exception as e:
-        print(f"[Signaling] Error for peer {peer_id}: {e}")
+        logger.error(f"[Signaling] Error for peer {peer_id}: {e}", exc_info=True)
         if peer_id in connected_peers:
             del connected_peers[peer_id]
 
@@ -77,5 +80,5 @@ def read_root():
 
 
 if __name__ == "__main__":
-    print("Starting FastAPI server on port 8001...")
+    logger.info("Starting FastAPI server on port 8001...")
     uvicorn.run(app, host="0.0.0.0", port=8001)

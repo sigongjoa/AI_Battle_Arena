@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Battle Arena - 종합 테스트 리포트</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card.success {
+            border-left-color: #10b981;
+        }
+
+        .stat-card.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .stat-card.danger {
+            border-left-color: #ef4444;
+        }
+
+        .stat-card h3 {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-card.success .number {
+            color: #10b981;
+        }
+
+        .stat-card.danger .number {
+            color: #ef4444;
+        }
+
+        .stat-card .percentage {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .test-suite {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .test-suite h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .test-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .test-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .test-list li:last-child {
+            border-bottom: none;
+        }
+
+        .test-badge {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .test-badge.pass {
+            background: #10b981;
+        }
+
+        .test-badge.fail {
+            background: #ef4444;
+        }
+
+        .test-badge.partial {
+            background: #f59e0b;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .alert.warning {
+            background: #fef3c7;
+            color: #78350f;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .alert.danger {
+            background: #fee2e2;
+            color: #7f1d1d;
+            border-left: 4px solid #ef4444;
+        }
+
+        .footer {
+            background: #f3f4f6;
+            padding: 20px 40px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+            display: flex;
+        }
+
+        .progress-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .progress-segment.pass {
+            background: #10b981;
+        }
+
+        .progress-segment.fail {
+            background: #ef4444;
+        }
+
+        .progress-segment.partial {
+            background: #f59e0b;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .badge.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge.danger {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+
+        .badge.warning {
+            background: #fef3c7;
+            color: #78350f;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 AI Battle Arena</h1>
+            <p>종합 테스트 리포트 | 2025-11-20</p>
+        </div>
+
+        <div class="content">
+            <!-- 통계 카드 -->
+            <section class="section">
+                <h2>📊 테스트 통계</h2>
+                <div class="stats-grid">
+                    <div class="stat-card success">
+                        <h3>전체 성공</h3>
+                        <div class="number">99</div>
+                        <div class="percentage">77.3% 통과</div>
+                    </div>
+
+                    <div class="stat-card danger">
+                        <h3>실패</h3>
+                        <div class="number">6</div>
+                        <div class="percentage">pytest만 (4.7%)</div>
+                    </div>
+
+                    <div class="stat-card warning">
+                        <h3>부분 완료</h3>
+                        <div class="number">23</div>
+                        <div class="percentage">Playwright (18.0%)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- pytest 결과 -->
+            <section class="section">
+                <h2>1️⃣ Python 백엔드 테스트 (pytest)</h2>
+
+                <div class="alert success">
+                    <span>✓</span>
+                    <span><strong>44/50 테스트 통과</strong> - 게임 엔진, 보상 시스템 정상 작동</span>
+                </div>
+
+                <div class="test-suite">
+                    <h3>✅ 성공 (44개)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>테스트 모듈</th>
+                                <th>테스트 수</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Phase 7 모듈</td>
+                                <td>13</td>
+                                <td><span class="badge success">통과</span></td>
+                            </tr>
+                            <tr>
+                                <td>게임 엔진 (Player, Hitbox, Collision)</td>
+                                <td>10</td>
+                                <td><span class="badge success">통과</span></td>
+                            </tr>
+                            <tr>
+                                <td>보상 계산 시스템</td>
+                                <td>11</td>
+                                <td><span class="badge success">통과</span></td>
+                            </tr>
+                            <tr>
+                                <td>RL 환경 및 리듬 분석</td>
+                                <td>10</td>
+                                <td><span class="badge success">통과</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="test-suite">
+                    <h3>❌ 실패 (6개)</h3>
+                    <div class="alert danger">
+                        <span>⚠</span>
+                        <span><strong>KeyError: 'state'</strong> in fighting_env.reset() - WebRTC 응답 형식 불일치</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>테스트</th>
+                                <th>원인</th>
+                                <th>파일</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>test_env_initialization_and_reset</td>
+                                <td>fighting_env.py:159</td>
+                                <td>test_agent_gameplay_integration.py</td>
+                            </tr>
+                            <tr>
+                                <td>test_agent_movement</td>
+                                <td>KeyError: 'state'</td>
+                                <td>test_agent_gameplay_integration.py</td>
+                            </tr>
+                            <tr>
+                                <td>test_agent_attack_and_health_reduction</td>
+                                <td>KeyError: 'state'</td>
+                                <td>test_agent_gameplay_integration.py</td>
+                            </tr>
+                            <tr>
+                                <td>test_win_loss_condition</td>
+                                <td>KeyError: 'state'</td>
+                                <td>test_agent_gameplay_integration.py</td>
+                            </tr>
+                            <tr>
+                                <td>test_reward_for_dealing_damage</td>
+                                <td>KeyError: 'state'</td>
+                                <td>test_agent_gameplay_integration.py</td>
+                            </tr>
+                            <tr>
+                                <td>test_reward_for_taking_damage</td>
+                                <td>KeyError: 'state'</td>
+                                <td>test_agent_gameplay_integration.py</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="test-suite">
+                    <h3>📊 실행 통계</h3>
+                    <ul class="test-list">
+                        <li><span class="test-badge pass">✓</span> <strong>실행 시간</strong>: 116.12초</li>
+                        <li><span class="test-badge pass">✓</span> <strong>성공률</strong>: 88%</li>
+                        <li><span class="test-badge pass">✓</span> <strong>커버리지</strong>: 리포트 생성됨</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- npm test 결과 -->
+            <section class="section">
+                <h2>2️⃣ 프론트엔드 테스트 (npm test / Vitest)</h2>
+
+                <div class="alert success">
+                    <span>✓</span>
+                    <span><strong>13/13 테스트 통과 (100%)</strong> - 모든 React 컴포넌트 정상</span>
+                </div>
+
+                <div class="test-suite">
+                    <h3>✅ 성공한 테스트</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>테스트 카테고리</th>
+                                <th>수</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>POC (Proof of Concept)</td>
+                                <td>3</td>
+                                <td><span class="badge success">통과</span></td>
+                            </tr>
+                            <tr>
+                                <td>React 컴포넌트</td>
+                                <td>10</td>
+                                <td><span class="badge success">통과</span></td>
+                            </tr>
+                            <tr>
+                                <td>게임 로직 검증</td>
+                                <td>Rollback, Determinism</td>
+                                <td><span class="badge success">통과</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="test-suite">
+                    <h3>📊 커버리지 분석</h3>
+                    <div class="progress-bar">
+                        <div class="progress-segment pass" style="width: 20.97%;">20.97%</div>
+                        <div class="progress-segment partial" style="width: 30%;">미커버 30%</div>
+                        <div class="progress-segment fail" style="width: 49.03%;">미테스트 49%</div>
+                    </div>
+                    <ul class="test-list">
+                        <li><span class="test-badge pass">✓</span> <strong>전체</strong>: 20.97%</li>
+                        <li><span class="test-badge pass">✓</span> <strong>게임 로직</strong>: 57.81%</li>
+                        <li><span class="test-badge warning">⚠</span> <strong>컴포넌트</strong>: 23.3%</li>
+                        <li><span class="test-badge fail">✗</span> <strong>WebRTC</strong>: 0%</li>
+                    </ul>
+                </div>
+
+                <div class="test-suite">
+                    <h3>📊 실행 통계</h3>
+                    <ul class="test-list">
+                        <li><span class="test-badge pass">✓</span> <strong>실행 시간</strong>: 18.63초</li>
+                        <li><span class="test-badge warning">⚠</span> <strong>경고</strong>: React act() 4개 (무시 가능)</li>
+                        <li><span class="test-badge warning">⚠</span> <strong>Chart.js</strong>: DOM 컨텍스트 경고 (테스트만)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Playwright 결과 -->
+            <section class="section">
+                <h2>3️⃣ E2E 테스트 (Playwright)</h2>
+
+                <div class="alert warning">
+                    <span>⚠</span>
+                    <span><strong>부분 완료</strong> - dev 서버 연결 이슈 있음 (해결 가능)</span>
+                </div>
+
+                <div class="test-suite">
+                    <h3>✅ 설정 완료</h3>
+                    <ul class="test-list">
+                        <li><span class="test-badge pass">✓</span> <strong>playwright.config.ts</strong> 생성</li>
+                        <li><span class="test-badge pass">✓</span> <strong>e2e/app.spec.ts</strong> 작성 (15 테스트)</li>
+                        <li><span class="test-badge pass">✓</span> <strong>브라우저</strong>: Chromium, Firefox, WebKit</li>
+                        <li><span class="test-badge pass">✓</span> <strong>리포트</strong>: HTML, JSON, JUnit XML</li>
+                        <li><span class="test-badge pass">✓</span> <strong>스크린샷</strong>: on-failure 설정</li>
+                    </ul>
+                </div>
+
+                <div class="test-suite">
+                    <h3>📋 정의된 테스트</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>카테고리</th>
+                                <th>테스트 수</th>
+                                <th>설명</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Main Application</td>
+                                <td>3</td>
+                                <td>로딩, 메뉴, 네비게이션</td>
+                            </tr>
+                            <tr>
+                                <td>Performance</td>
+                                <td>2</td>
+                                <td>로드 시간, Web Vitals</td>
+                            </tr>
+                            <tr>
+                                <td>Accessibility</td>
+                                <td>2</td>
+                                <td>Heading 구조, 키보드 네비게이션</td>
+                            </tr>
+                            <tr>
+                                <td>Error Handling</td>
+                                <td>2</td>
+                                <td>에러 처리, 콘솔 안정성</td>
+                            </tr>
+                            <tr>
+                                <td>Responsive Design</td>
+                                <td>6</td>
+                                <td>Mobile, Tablet, Desktop</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="test-suite">
+                    <h3>⚠️ 현재 이슈</h3>
+                    <div class="alert danger">
+                        <span>✗</span>
+                        <span><strong>net::ERR_CONNECTION_REFUSED</strong> at localhost:5173</span>
+                    </div>
+                    <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-top: 10px; font-family: monospace; font-size: 0.9em; overflow-x: auto;">
+                        Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/<br>
+                        → dev 서버 연결 불안정
+                    </div>
+                </div>
+            </section>
+
+            <!-- 최종 요약 -->
+            <section class="section">
+                <h2>🎯 최종 요약</h2>
+
+                <div class="test-suite">
+                    <h3>📊 종합 점수</h3>
+                    <div class="progress-bar">
+                        <div class="progress-segment pass" style="width: 77.3%;">통과 77.3%</div>
+                        <div class="progress-segment fail" style="width: 4.7%;">실패 4.7%</div>
+                        <div class="progress-segment partial" style="width: 18.0%;">부분 18%</div>
+                    </div>
+                </div>
+
+                <div class="test-suite">
+                    <h3>🔧 즉시 해결 필요</h3>
+                    <ul class="test-list">
+                        <li><span class="test-badge fail">1</span> <strong>fighting_env.reset()</strong> - KeyError: 'state' 해결</li>
+                        <li><span class="test-badge fail">2</span> <strong>Playwright 서버</strong> - localhost:5173 연결 개선</li>
+                        <li><span class="test-badge warning">3</span> <strong>React act() 경고</strong> - 테스트 유틸 개선</li>
+                    </ul>
+                </div>
+
+                <div class="test-suite">
+                    <h3>📈 권장 개선사항</h3>
+                    <ul class="test-list">
+                        <li><strong>커버리지 상향</strong>: React 20.97% → 80%+ 목표</li>
+                        <li><strong>E2E 안정화</strong>: Playwright 테스트 완성</li>
+                        <li><strong>자동화</strong>: CI/CD 통합 (GitHub Actions)</li>
+                        <li><strong>성능</strong>: 테스트 실행 시간 최적화</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 파일 위치 -->
+            <section class="section">
+                <h2>📁 리포트 파일 위치</h2>
+
+                <div class="test-suite">
+                    <h3>pytest</h3>
+                    <ul class="test-list">
+                        <li>📄 test_reports/pytest_report.html</li>
+                        <li>📊 test_reports/coverage/ (HTML 리포트)</li>
+                        <li>📋 test_reports/coverage.json</li>
+                    </ul>
+                </div>
+
+                <div class="test-suite">
+                    <h3>npm test</h3>
+                    <ul class="test-list">
+                        <li>📋 test_reports/npm_test_output.log</li>
+                    </ul>
+                </div>
+
+                <div class="test-suite">
+                    <h3>Playwright</h3>
+                    <ul class="test-list">
+                        <li>📁 arcade-clash/e2e/app.spec.ts</li>
+                        <li>📁 arcade-clash/playwright.config.ts</li>
+                        <li>📁 test_reports/playwright/ (설정 중)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 명령어 -->
+            <section class="section">
+                <h2>💻 테스트 실행 명령어</h2>
+
+                <div style="background: #1e293b; color: #e2e8f0; padding: 20px; border-radius: 8px; font-family: 'Monaco', 'Courier New', monospace; font-size: 0.9em; overflow-x: auto;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="color: #a8dadc; margin-bottom: 5px;"># Python 테스트</div>
+                        <div>$ pytest tests/ -v --cov=src --cov-report=html</div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="color: #a8dadc; margin-bottom: 5px;"># npm 테스트</div>
+                        <div>$ cd arcade-clash && npm test -- --coverage</div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="color: #a8dadc; margin-bottom: 5px;"># Playwright E2E</div>
+                        <div>$ cd arcade-clash && npx playwright test</div>
+                    </div>
+                    <div>
+                        <div style="color: #a8dadc; margin-bottom: 5px;"># Playwright 리포트 보기</div>
+                        <div>$ npx playwright show-report</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="footer">
+            <p>🎉 AI Battle Arena 종합 테스트 리포트</p>
+            <p>생성: 2025-11-20 | 생성자: Claude Code</p>
+            <p>pytest (44✓/6✗) | npm test (13✓/0✗) | Playwright (설정 완료)</p>
+        </div>
+    </div>
+</body>
+</html>

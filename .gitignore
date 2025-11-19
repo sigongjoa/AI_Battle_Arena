@@ -1,13 +1,32 @@
 # Environments
 venv/
 .venv/
+env/
+ENV/
 
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
 
-# Test cache
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test artifacts
 .pytest_cache/
+.coverage
+htmlcov/
+test_logs/
+test_models/
 
 # Build artifacts
 *.zip
@@ -16,6 +35,7 @@ __pycache__/
 # Logs and data
 logs/
 save/
+reports/
 pose_output.json
 *.log
 
@@ -25,4 +45,17 @@ arcade-clash@0.0.0
 arcade-clash@0.0.0/
 vite
 vite/
-package.json
+package-lock.json
+
+# Cache
+.cache/
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS specific
+Thumbs.db
+*.swp

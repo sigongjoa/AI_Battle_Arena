@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Line } from 'react-chartjs-2';
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
 
 interface MetricData {
   labels: string[];
@@ -16,22 +19,15 @@ const RLDashboardPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      const response = await fetch('/mock_dashboard_data.json');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
 
-      // Placeholder data
-      setRewardData({
-        labels: Array.from({ length: 10 }, (_, i) => `Episode ${i * 100}`),
-        values: Array.from({ length: 10 }, (_, i) => Math.random() * 100 - 50 + i * 5),
-      });
-      setWinRateData({
-        labels: Array.from({ length: 10 }, (_, i) => `Episode ${i * 100}`),
-        values: Array.from({ length: 10 }, (_, i) => Math.random() * 0.3 + 0.5 + i * 0.02),
-      });
-      setEpisodeLengthData({
-        labels: Array.from({ length: 10 }, (_, i) => `Episode ${i * 100}`),
-        values: Array.from({ length: 10 }, (_, i) => Math.random() * 50 + 100 - i * 2),
-      });
+      setRewardData(data.rewardData);
+      setWinRateData(data.winRateData);
+      setEpisodeLengthData(data.episodeLengthData);
 
     } catch (err) {
       setError('Failed to fetch dashboard data.');
@@ -45,20 +41,42 @@ const RLDashboardPage: React.FC = () => {
     fetchDashboardData();
   }, []);
 
-  const renderChartPlaceholder = (title: string, data: MetricData | null) => (
-    <div style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#fff' }}>
-      <h3>{title}</h3>
-      {data ? (
-        <div style={{ height: '200px', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9' }}>
-          <p>Chart Placeholder for {title}</p>
-          {/* In a real implementation, a charting library (e.g., Chart.js, Recharts) would render the data here */}
-          {/* Example: <LineChart data={data} /> */}
-        </div>
-      ) : (
-        <p>No data available.</p>
-      )}
-    </div>
-  );
+  const renderChart = (title: string, data: MetricData | null) => {
+    if (!data) return <p>No data available.</p>;
+
+    const chartData = {
+      labels: data.labels,
+      datasets: [
+        {
+          label: title,
+          data: data.values,
+          fill: false,
+          backgroundColor: 'rgb(75, 192, 192)',
+          borderColor: 'rgba(75, 192, 192, 0.2)',
+        },
+      ],
+    };
+
+    const options = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top' as const,
+        },
+        title: {
+          display: true,
+          text: title,
+        },
+      },
+    };
+
+    return (
+      <div style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#fff' }}>
+        <h3>{title}</h3>
+        <Line data={chartData} options={options} />
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
@@ -83,9 +101,9 @@ const RLDashboardPage: React.FC = () => {
 
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
 
-      {renderChartPlaceholder('Reward Over Episodes', rewardData)}
-      {renderChartPlaceholder('Win Rate Over Episodes', winRateData)}
-      {renderChartPlaceholder('Episode Length Over Episodes', episodeLengthData)}
+      {renderChart('Reward Over Episodes', rewardData)}
+      {renderChart('Win Rate Over Episodes', winRateData)}
+      {renderChart('Episode Length Over Episodes', episodeLengthData)}
     </div>
   );
 };

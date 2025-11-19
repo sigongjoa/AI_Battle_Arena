@@ -1,6 +1,0 @@
-{
-    "video_source": "sample_video.mp4",
-    "frame_rate": 30.0,
-    "total_frames": 150,
-    "pose_landmarks": []
-}

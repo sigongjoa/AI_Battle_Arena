@@ -6,13 +6,13 @@ import numpy as np
 import queue
 import itertools
 
-import src.webrtc_client # Import src.webrtc_client
-import src.fighting_env # Import src.fighting_env to patch its internal WebRTCClient
+import src.networking.webrtc # Import webrtc
+import src.rl_training.environment # Import environment to patch its internal WebRTCClient
 from stable_baselines3.common.monitor import Monitor, ResultsWriter # Import Monitor to mock it
 
 # Import the function to be tested
-from train_rl_agent import train_agent
-from src.wrappers import FlattenActionSpaceWrapper # Import the custom wrapper
+from scripts.train import train_agent
+from src.rl_training.wrappers import FlattenActionSpaceWrapper # Import the custom wrapper
 
 # Define paths for test logs and models
 TEST_LOG_DIR = "./test_logs/ppo_fighting_env_multi_agent"

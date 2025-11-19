@@ -91,7 +91,7 @@ export default function MainMenu(props: MainMenuProps) {
             </h1>
             <p className="text-text-gray mb-12">The Ultimate Fighting Experience</p>
             <nav className="flex flex-col items-center space-y-4">
-                <PrimaryButton onClick={() => onNavigate(Screen.Lobby)}>
+                <PrimaryButton onClick={() => onNavigate(Screen.MainMenu, 'lobby')}>
                     Online Lobby
                 </PrimaryButton>
                 <SecondaryButton onClick={() => onNavigate(Screen.CharacterSelect)}>
@@ -153,7 +153,7 @@ export default function MainMenu(props: MainMenuProps) {
                     </PrimaryButton>
                 </div>
             )}
-             <button onClick={() => onNavigate(Screen.MainMenu)} className="mt-6 text-highlight-yellow">
+             <button onClick={() => onNavigate(Screen.MainMenu, 'main')} className="mt-6 text-highlight-yellow">
                 &larr; Back to Main Menu
             </button>
         </div>

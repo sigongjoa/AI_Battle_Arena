@@ -1,0 +1,42 @@
+[
+  {
+    "frame": 0,
+    "player1": {"x": 0, "y": 0, "hp": 100, "action": "idle"},
+    "player2": {"x": 10, "y": 0, "hp": 100, "action": "idle"}
+  },
+  {
+    "frame": 1,
+    "player1": {"x": 1, "y": 0, "hp": 100, "action": "move_right"},
+    "player2": {"x": 9, "y": 0, "hp": 100, "action": "idle"}
+  },
+  {
+    "frame": 2,
+    "player1": {"x": 2, "y": 0, "hp": 100, "action": "move_right"},
+    "player2": {"x": 8, "y": 0, "hp": 100, "action": "punch"}
+  },
+  {
+    "frame": 3,
+    "player1": {"x": 2, "y": 0, "hp": 90, "action": "hit_stun"},
+    "player2": {"x": 8, "y": 0, "hp": 100, "action": "punch"}
+  },
+  {
+    "frame": 4,
+    "player1": {"x": 2, "y": 0, "hp": 90, "action": "idle"},
+    "player2": {"x": 8, "y": 0, "hp": 100, "action": "idle"}
+  },
+  {
+    "frame": 5,
+    "player1": {"x": 3, "y": 0, "hp": 90, "action": "kick"},
+    "player2": {"x": 7, "y": 0, "hp": 100, "action": "block"}
+  },
+  {
+    "frame": 6,
+    "player1": {"x": 3, "y": 0, "hp": 90, "action": "kick"},
+    "player2": {"x": 7, "y": 0, "hp": 100, "action": "block"}
+  },
+  {
+    "frame": 7,
+    "player1": {"x": 3, "y": 0, "hp": 90, "action": "idle"},
+    "player2": {"x": 7, "y": 0, "hp": 100, "action": "idle"}
+  }
+]
