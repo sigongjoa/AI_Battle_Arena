@@ -220,7 +220,7 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
         rendererRef.current = null;
       }
     };
-  }, []); // 초기 로드만 수행
+  }, [JSON.stringify(gameState.players.map(p => p.character))]); // gameState.players 변경 감지
 
   /**
    * 게임 상태에 따라 캐릭터 위치 업데이트
@@ -242,10 +242,11 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
       const asset = characterAssetsRef.current[player.character.toLowerCase()];
       if (asset?.mesh) {
         // 위치 업데이트 (X축만 게임 상태에 따라 움직임)
-        // Y축: 메시 로드 시 계산된 중심 오프셋 유지 (절대 0으로 리셋하지 않음)
-        // Z축: 플레이어 깊이 (카메라 전면 배치)
-        const newX = (player.x - 600) / 100;
-        const newZ = player.id === 1 ? -2 : 2;
+        // 게임 좌표계(0~1200)를 렌더링 좌표계(-600~600)로 변환
+        // 카메라는 (0,0)을 보고 있으므로 -600 오프셋으로 중앙 정렬
+        const newX = player.x - 600;
+        // Z축: 플레이어 깊이 (카메라 전면 배치, 겹치지 않도록 간격)
+        const newZ = player.id === 1 ? 50 : -50;
 
         asset.mesh.position.x = newX;
         // Y 위치는 로드 시점의 중심 오프셋 유지 - 변경하지 않음
