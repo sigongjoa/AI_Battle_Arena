@@ -221,6 +221,14 @@ export class CharacterRenderer {
   }
 
   /**
+   * 현재 씬 객체 조회
+   * @returns Three.js Scene 객체
+   */
+  getScene(): THREE.Scene {
+    return this.scene;
+  }
+
+  /**
    * WebGL 렌더러 HTML 엘리먼트 조회
    * @returns Canvas 엘리먼트
    */

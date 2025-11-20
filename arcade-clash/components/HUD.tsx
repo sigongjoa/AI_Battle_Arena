@@ -4,22 +4,49 @@ import PauseMenu from './PauseMenu';
 import Character from './Character';
 import { GameInputProvider } from './GameInputProvider';
 
+interface GameStatePlayer {
+  id: number | string;
+  character: string;
+  x: number;
+  y: number;
+  health: number;
+  action: string;
+  frame: number;
+}
+
+interface GameStateData {
+  timer: number;
+  players: GameStatePlayer[];
+}
+
 interface HUDProps {
   player1: CharacterType;
   player2: CharacterType;
-  webRtcClient: any; // WebRTC client will be passed as a prop
+  webRtcClient?: any; // WebRTC client will be passed as a prop (optional for offline mode)
   onMatchEnd: (winner: CharacterType | null) => void;
   onNavigate: (screen: Screen) => void;
+  gameState?: GameStateData; // Optional: pass game state from parent
 }
 
-const defaultGameState = {
+const defaultGameState: GameStateData = {
   timer: 99,
   players: [],
 };
 
-const HUD: React.FC<HUDProps> = ({ player1, player2, webRtcClient, onMatchEnd, onNavigate }) => {
-  const [gameState, setGameState] = useState(defaultGameState);
+const HUD: React.FC<HUDProps> = ({ player1, player2, webRtcClient, onMatchEnd, onNavigate, gameState: externalGameState }) => {
+  const [gameState, setGameState] = useState<GameStateData>(externalGameState || defaultGameState);
   const [isPaused, setIsPaused] = useState(false);
+
+  console.log('[HUD] Component rendered, gameState:', gameState);
+  console.log('[HUD] player1:', player1, 'player2:', player2);
+
+  // Update gameState if it comes from parent
+  useEffect(() => {
+    if (externalGameState) {
+      console.log('[HUD] Updated gameState from parent:', externalGameState);
+      setGameState(externalGameState);
+    }
+  }, [externalGameState]);
 
   useEffect(() => {
     if (!webRtcClient) return;
@@ -61,21 +88,48 @@ const HUD: React.FC<HUDProps> = ({ player1, player2, webRtcClient, onMatchEnd, o
         {isPaused && <PauseMenu onResume={() => setIsPaused(false)} onRestart={() => onNavigate(Screen.CharacterSelect)} onQuit={() => onNavigate(Screen.MainMenu)} />}
         <div className="absolute inset-0 bg-black/50"></div>
 
-        {(() => {
-          const p1 = gameState.players.find(p => p.id === player1.id);
-          const p2 = gameState.players.find(p => p.id === player2.id);
-          if (!p1 || !p2) return null;
-          const p1Direction = p1.x < p2.x ? 'right' : 'left';
-          const p2Direction = p1Direction === 'right' ? 'left' : 'right';
-          return (
-            <>
-              <Character key={p1.id} name={p1.character} x={p1.x} y={p1.y} action={p1.action} frame={p1.frame} direction={p1Direction} />
-              <Character key={p2.id} name={p2.character} x={p2.x} y={p2.y} action={p2.action} frame={p2.frame} direction={p2Direction} />
-            </>
-          );
-        })()}
-        
-        <div className="relative flex h-full grow flex-col p-4 sm:p-6 lg:p-8">
+        {/* Game arena - Characters rendered here */}
+        <div className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none', zIndex: 5 }}>
+          {/* 경기장 배경 */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '400px',
+            background: 'linear-gradient(180deg, rgba(50,50,100,0.3) 0%, rgba(30,30,60,0.5) 100%)',
+            borderTop: '3px solid #444',
+            zIndex: 1
+          }} />
+
+          {/* 바닥선 */}
+          <div style={{
+            position: 'absolute',
+            bottom: '150px',
+            left: 0,
+            right: 0,
+            height: '2px',
+            background: 'linear-gradient(90deg, transparent 0%, #888 20%, #888 80%, transparent 100%)',
+            zIndex: 2
+          }} />
+
+          {/* 캐릭터 렌더링 */}
+          {(() => {
+            const p1 = gameState.players.find(p => p.id === player1.id);
+            const p2 = gameState.players.find(p => p.id === player2.id);
+            if (!p1 || !p2) return null;
+            const p1Direction = p1.x < p2.x ? 'right' : 'left';
+            const p2Direction = p1Direction === 'right' ? 'left' : 'right';
+            return (
+              <>
+                <Character key={p1.id} name={p1.character} x={p1.x} y={p1.y} action={p1.action} frame={p1.frame} direction={p1Direction} />
+                <Character key={p2.id} name={p2.character} x={p2.x} y={p2.y} action={p2.action} frame={p2.frame} direction={p2Direction} />
+              </>
+            );
+          })()}
+        </div>
+
+        <div className="relative flex h-full grow flex-col p-4 sm:p-6 lg:p-8 pointer-events-auto" style={{ zIndex: 10 }}>
           {/* Top HUD */}
           <div className="flex items-start justify-between gap-4">
             {/* Player 1 */}

@@ -16,15 +16,15 @@ import { Screen } from '../types';
 
 interface MainMenuProps {
   onNavigate: (screen: Screen) => void;
-  playerId: string;
-  lobbyPlayers: any[]; // Use 'any' or define a global Player type
-  matchRequest: any | null; // Use 'any' or define a global MatchRequest type
-  connectionStatus: string;
-  onJoinLobby: (playerName: string) => Promise<boolean>;
-  onRequestMatch: (targetId: string) => void;
-  onAcceptMatch: () => void;
-  onDeclineMatch: () => void;
-  currentSubScreen: 'main' | 'lobby'; // Added prop
+  playerId?: string;
+  lobbyPlayers?: any[]; // Use 'any' or define a global Player type
+  matchRequest?: any | null; // Use 'any' or define a global MatchRequest type
+  connectionStatus?: string;
+  onJoinLobby?: (playerName: string) => Promise<boolean>;
+  onRequestMatch?: (targetId: string) => void;
+  onAcceptMatch?: () => void;
+  onDeclineMatch?: () => void;
+  currentSubScreen?: 'main' | 'lobby'; // Added prop
 }
 
 // --- Helper Components ---
@@ -63,15 +63,15 @@ const InputField: React.FC<{value: string, onChange: (e: React.ChangeEvent<HTMLI
 export default function MainMenu(props: MainMenuProps) {
     const {
         onNavigate,
-        playerId,
-        lobbyPlayers,
-        matchRequest,
-        connectionStatus,
-        onJoinLobby,
-        onRequestMatch,
-        onAcceptMatch,
-        onDeclineMatch,
-        currentSubScreen
+        playerId = '',
+        lobbyPlayers = [],
+        matchRequest = null,
+        connectionStatus = 'Disconnected',
+        onJoinLobby = async () => false,
+        onRequestMatch = () => {},
+        onAcceptMatch = () => {},
+        onDeclineMatch = () => {},
+        currentSubScreen = 'main'
     } = props;
 
     const [playerName, setPlayerName] = useState(''); // Keep local for input field
@@ -91,7 +91,7 @@ export default function MainMenu(props: MainMenuProps) {
             </h1>
             <p className="text-text-gray mb-12">The Ultimate Fighting Experience</p>
             <nav className="flex flex-col items-center space-y-4">
-                <PrimaryButton onClick={() => onNavigate(Screen.MainMenu, 'lobby')}>
+                <PrimaryButton onClick={() => onNavigate(Screen.MainMenu)}>
                     Online Lobby
                 </PrimaryButton>
                 <SecondaryButton onClick={() => onNavigate(Screen.CharacterSelect)}>
@@ -153,7 +153,7 @@ export default function MainMenu(props: MainMenuProps) {
                     </PrimaryButton>
                 </div>
             )}
-             <button onClick={() => onNavigate(Screen.MainMenu, 'main')} className="mt-6 text-highlight-yellow">
+             <button onClick={() => onNavigate(Screen.MainMenu)} className="mt-6 text-highlight-yellow">
                 &larr; Back to Main Menu
             </button>
         </div>

@@ -12,6 +12,8 @@ export enum Screen {
     TrainingMode,
     DebugScreen,
     GameScreen, // Added for the main online game view
+    RLDemo,
+    RLDashboard,
 }
 
 export interface Character {

@@ -10,6 +10,17 @@
       "punch": { "row": 2, "frames": 4 }
     }
   },
+  "chun-li": {
+    "image": "/assets/characters/ken.png",
+    "thumbnail": "/assets/characters/thumbnails/ken_thumb.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "animations": {
+      "idle": { "row": 0, "frames": 4 },
+      "walk": { "row": 1, "frames": 4 },
+      "punch": { "row": 2, "frames": 4 }
+    }
+  },
   "ken": {
     "image": "/assets/characters/ken.png",
     "thumbnail": "/assets/characters/thumbnails/ken_thumb.png",
@@ -18,7 +29,62 @@
     "animations": {
       "idle": { "row": 0, "frames": 4 },
       "walk": { "row": 1, "frames": 4 },
-      "kick": { "row": 2, "frames": 4 }
+      "punch": { "row": 2, "frames": 4 }
+    }
+  },
+  "guile": {
+    "image": "/assets/characters/ryu.png",
+    "thumbnail": "/assets/characters/thumbnails/ryu_thumb.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "animations": {
+      "idle": { "row": 0, "frames": 4 },
+      "walk": { "row": 1, "frames": 4 },
+      "punch": { "row": 2, "frames": 4 }
+    }
+  },
+  "dhalsim": {
+    "image": "/assets/characters/ken.png",
+    "thumbnail": "/assets/characters/thumbnails/ken_thumb.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "animations": {
+      "idle": { "row": 0, "frames": 4 },
+      "walk": { "row": 1, "frames": 4 },
+      "punch": { "row": 2, "frames": 4 }
+    }
+  },
+  "blanka": {
+    "image": "/assets/characters/ryu.png",
+    "thumbnail": "/assets/characters/thumbnails/ryu_thumb.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "animations": {
+      "idle": { "row": 0, "frames": 4 },
+      "walk": { "row": 1, "frames": 4 },
+      "punch": { "row": 2, "frames": 4 }
+    }
+  },
+  "zangief": {
+    "image": "/assets/characters/ken.png",
+    "thumbnail": "/assets/characters/thumbnails/ken_thumb.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "animations": {
+      "idle": { "row": 0, "frames": 4 },
+      "walk": { "row": 1, "frames": 4 },
+      "punch": { "row": 2, "frames": 4 }
+    }
+  },
+  "e.honda": {
+    "image": "/assets/characters/ryu.png",
+    "thumbnail": "/assets/characters/thumbnails/ryu_thumb.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "animations": {
+      "idle": { "row": 0, "frames": 4 },
+      "walk": { "row": 1, "frames": 4 },
+      "punch": { "row": 2, "frames": 4 }
     }
   }
 }

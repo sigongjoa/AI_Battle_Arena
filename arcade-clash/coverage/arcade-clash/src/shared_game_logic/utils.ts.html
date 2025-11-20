@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/2</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -87,54 +87,54 @@
 <a name='L22'></a><a href='#L22'>22</a>
 <a name='L23'></a><a href='#L23'>23</a>
 <a name='L24'></a><a href='#L24'>24</a>
-<a name='L25'></a><a href='#L25'>25</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L25'></a><a href='#L25'>25</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">40310x</span>
-<span class="cline-any cline-yes">11520x</span>
-<span class="cline-any cline-yes">11520x</span>
-<span class="cline-any cline-yes">28790x</span>
-<span class="cline-any cline-yes">28790x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1152x</span>
-<span class="cline-any cline-yes">1152x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { FixedPoint } from './fixed_point';
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import { FixedPoint } from './fixed_point';<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
 import { GameState } from './game_state';
 &nbsp;
 /**
  * A JSON reviver function to reconstruct FixedPoint instances from their serialized format.
  * Use with JSON.parse(jsonString, fixedPointReviver).
  */
-export function fixedPointReviver(key: string, value: any): any {
-    if (value &amp;&amp; typeof value === 'object' &amp;&amp; value.hasOwnProperty('__fp')) {
-        return FixedPoint.fromRawValue(value.__fp);
-    }
-    return value;
-}
+<span class="cstat-no" title="statement not covered" >export function fixedPointReviver(key: string, value: any): any {</span>
+<span class="cstat-no" title="statement not covered" >    if (value &amp;&amp; typeof value === 'object' &amp;&amp; value.hasOwnProperty('__fp')) {</span>
+<span class="cstat-no" title="statement not covered" >        return FixedPoint.fromRawValue(value.__fp);</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    return value;</span>
+<span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;
 /**
  * Creates a deep copy of a GameState object, correctly handling FixedPoint instances.
  * @param gameState The GameState object to copy.
  * @returns A new, deep-copied GameState object.
  */
-export function deepCopyGameState(gameState: GameState): GameState {
+<span class="cstat-no" title="statement not covered" >export function deepCopyGameState(gameState: GameState): GameState {</span>
     // Use JSON.stringify with FixedPoint.toJSON() and JSON.parse with fixedPointReviver
     // to ensure FixedPoint instances are correctly serialized and deserialized.
-    return JSON.parse(JSON.stringify(gameState), fixedPointReviver);
-}
+<span class="cstat-no" title="statement not covered" >    return JSON.parse(JSON.stringify(gameState), fixedPointReviver);</span>
+<span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -142,7 +142,7 @@ export function deepCopyGameState(gameState: GameState): GameState {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-19T15:53:47.633Z
+                at 2025-11-20T01:11:30.051Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
