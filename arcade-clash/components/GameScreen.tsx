@@ -241,14 +241,18 @@ const GameScreen: React.FC<GameScreenProps> = ({ webRtcClient, onNavigate, playe
       </div>
 
       {/* Game Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
         {/* Use Game3D (Phase 8 3D rigging system) for 3D rendering */}
         {/* To use GameArena (2D sprite rendering) instead, comment out Game3D and uncomment GameArena below */}
         <Game3D
           gameState={gameState}
           player1={player1}
           player2={player2}
-          characterFbxUrls={{}}
+          characterFbxUrls={{
+            'ryu': '/models/remy.fbx',
+            'chun-li': '/models/remy.fbx',
+            'remy': '/models/remy.fbx'
+          }}
         />
         {/* <GameArena gameState={gameState} player1={player1} player2={player2} /> */}
       </div>

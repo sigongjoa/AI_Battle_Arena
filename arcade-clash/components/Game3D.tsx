@@ -49,13 +49,19 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
   const [fps, setFps] = useState(0);
   const [loadTime, setLoadTime] = useState(0);
 
-  // 기본 FBX URL (실제 사용 시 올바른 URL로 대체 필요)
+  // FBX URL 매핑 - 실제 모델 파일 로드
   const getCharacterFbxUrl = (characterName: string): string => {
-    if (characterFbxUrls[characterName.toLowerCase()]) {
-      return characterFbxUrls[characterName.toLowerCase()];
-    }
-    // 플레이스홀더 - 실제 구현 시 올바른 경로로 대체
-    return `/models/${characterName.toLowerCase()}.fbx`;
+    // 모든 캐릭터에 동일한 Remy 모델 사용 (임시)
+    return characterFbxUrls[characterName.toLowerCase()] || '/models/remy.fbx';
+  };
+
+  // 디버그용 함수
+  const logAssetState = (label: string) => {
+    const assets = Object.keys(characterAssetsRef.current);
+    console.log(`[Game3D] ${label} - Assets in ref: ${assets.join(', ')} (count: ${assets.length})`);
+    Object.entries(characterAssetsRef.current).forEach(([key, asset]) => {
+      console.log(`  └─ ${key}: mesh=${asset?.mesh ? 'YES' : 'NO'}, position=(${asset?.mesh?.position.x.toFixed(2)}, ${asset?.mesh?.position.y.toFixed(2)}, ${asset?.mesh?.position.z.toFixed(2)})`);
+    });
   };
 
   useEffect(() => {
@@ -67,9 +73,15 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
 
         // 1. 렌더러 생성 (한 번만)
         if (!rendererRef.current) {
+          const width = containerRef.current!.clientWidth || 1400;
+          const height = containerRef.current!.clientHeight || 600;
+
+          console.log(`[Game3D] Creating renderer with size: ${width}x${height}`);
+          console.log(`[Game3D] Container rect:`, containerRef.current!.getBoundingClientRect());
+
           rendererRef.current = new CharacterRenderer(containerRef.current!, {
-            width: containerRef.current!.clientWidth,
-            height: containerRef.current!.clientHeight,
+            width,
+            height,
             backgroundColor: 0x1a1a2e,
             pixelRatio: window.devicePixelRatio
           });
@@ -92,7 +104,8 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
             }
 
             const loader = loadersRef.current[characterName];
-            const fbxUrl = getCharacterFbxUrl(characterName);
+            // 모든 캐릭터에 Remy 모델 사용
+            const fbxUrl = '/models/remy.fbx';
 
             console.log(`[Game3D] Loading character: ${characterName} from ${fbxUrl}`);
             const character = await loader.loadCharacter(fbxUrl);
@@ -110,35 +123,67 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
 
             // 렌더러에 메시 추가
             rendererRef.current!.addCharacterMesh(character.mesh);
-            characterAssetsRef.current[characterName] = character;
+            // 메시 로드 후 Y 오프셋 저장 (프레임마다 리셋되는 것을 방지)
+            const meshYOffset = character.mesh.position.y;
+            const meshZOffset = character.mesh.position.z;
+            characterAssetsRef.current[characterName] = {
+              ...character,
+              meshYOffset,
+              meshZOffset
+            };
 
             console.log(`[Game3D] ✅ Loaded character: ${characterName}`);
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             console.error(`[Game3D] Failed to load character ${characterName}: ${errorMessage}`);
-            // 플레이스홀더 박스로 대체
+            // 플레이스홀더 박스로 대체 - 카메라 뷰 범위 내에서 표시
             const placeholderBox = new THREE.Mesh(
-              new THREE.BoxGeometry(1, 2, 0.5),
-              new THREE.MeshStandardMaterial({ color: 0x666666 })
+              new THREE.BoxGeometry(60, 120, 40),
+              new THREE.MeshStandardMaterial({
+                color: 0x6db3f2,
+                metalness: 0.2,
+                roughness: 0.3,
+                emissive: 0x4a9eff,
+                emissiveIntensity: 0.5
+              })
             );
+            placeholderBox.castShadow = true;
+            placeholderBox.receiveShadow = true;
+            // 플레이어별 위치 설정 (카메라 뷰 범위 내)
+            const playerIndex = gameState.players.findIndex(p => p.character.toLowerCase() === characterName);
+            if (playerIndex >= 0) {
+              const player = gameState.players[playerIndex];
+              placeholderBox.position.x = (player.x - 600) / 10; // 스케일 조정
+              placeholderBox.position.z = playerIndex === 0 ? -50 : 50;
+              console.log(`[Game3D] Placeholder position for ${characterName}: (${placeholderBox.position.x}, 0, ${placeholderBox.position.z})`);
+            }
             rendererRef.current!.getScene().add(placeholderBox);
             characterAssetsRef.current[characterName] = { mesh: placeholderBox, mixer: null };
+            console.log(`[Game3D] ✅ Added placeholder for character: ${characterName}`);
           }
         }
 
         // 3. 애니메이션 렌더링 루프 시작
+        // 유효한 mixer 찾기 (있으면 사용, 없으면 더미 mixer 생성)
         const mixers = Object.values(characterAssetsRef.current)
           .map(asset => asset.mixer)
           .filter(mixer => mixer !== null);
 
-        if (mixers.length > 0) {
-          rendererRef.current!.startAnimationLoop(mixers[0], (deltaTime, currentFps) => {
-            setFps(Math.round(currentFps));
+        // mixer가 없어도 항상 렌더링 루프 시작 (placeholder의 경우 mixer가 null)
+        const mixerToUse = mixers.length > 0
+          ? mixers[0]
+          : new THREE.AnimationMixer(new THREE.Object3D());
 
-            // 게임 상태에 따라 카메라 및 오브젝트 위치 업데이트
-            updateCharacterPositions(gameState);
-          });
-        }
+        // 애니메이션 루프 시작 전 asset 상태 확인
+        logAssetState('BEFORE animation loop start');
+
+        rendererRef.current!.startAnimationLoop(mixerToUse, (deltaTime, currentFps) => {
+          setFps(Math.round(currentFps));
+          // 위치 업데이트는 별도의 useEffect에서 처리됨 (line 230-240)
+        });
+
+        console.log(`[Game3D] Animation loop started with ${mixers.length} valid mixer(s)`);
+        logAssetState('AFTER animation loop start');
 
         const endTime = performance.now();
         const totalLoadTime = endTime - startTime;
@@ -175,19 +220,42 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
         rendererRef.current = null;
       }
     };
-  }, [gameState, characterFbxUrls]);
+  }, []); // 초기 로드만 수행
 
   /**
    * 게임 상태에 따라 캐릭터 위치 업데이트
    */
+  useEffect(() => {
+    if (!rendererRef.current) return;
+
+    const updatePositions = () => {
+      updateCharacterPositions(gameState);
+      requestAnimationFrame(updatePositions);
+    };
+
+    const frameId = requestAnimationFrame(updatePositions);
+    return () => cancelAnimationFrame(frameId);
+  }, [gameState]);
+
   const updateCharacterPositions = (gameState: { timer: number; players: GamePlayer[] }) => {
     gameState.players.forEach((player, index) => {
       const asset = characterAssetsRef.current[player.character.toLowerCase()];
       if (asset?.mesh) {
-        // 위치 업데이트 (Y축 수평, Z축 깊이)
-        asset.mesh.position.x = (player.x - 600) / 100; // 캔버스 좌표를 3D 좌표로 변환
-        asset.mesh.position.y = 0;
-        asset.mesh.position.z = player.id === 1 ? -2 : 2;
+        // 위치 업데이트 (X축만 게임 상태에 따라 움직임)
+        // Y축: 메시 로드 시 계산된 중심 오프셋 유지 (절대 0으로 리셋하지 않음)
+        // Z축: 플레이어 깊이 (카메라 전면 배치)
+        const newX = (player.x - 600) / 100;
+        const newZ = player.id === 1 ? -2 : 2;
+
+        asset.mesh.position.x = newX;
+        // Y 위치는 로드 시점의 중심 오프셋 유지 - 변경하지 않음
+        // asset.mesh.position.y는 이미 CharacterRenderer.addCharacterMesh()에서 설정됨
+        asset.mesh.position.z = newZ;
+
+        // 디버그 로그 (첫 5프레임만)
+        if (index === 0 && performance.now() % 1000 < 16) {
+          console.log(`[Game3D] UPDATE ${player.character}: pos(${newX.toFixed(2)}, ${asset.mesh.position.y.toFixed(2)}, ${newZ}), health=${player.health}, action=${player.action}`);
+        }
 
         // 액션에 따른 애니메이션 업데이트 (간단한 구현)
         // 실제로는 애니메이션 클립을 플레이해야 함
@@ -196,19 +264,27 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
         } else {
           asset.mesh.rotation.z *= 0.95;
         }
+      } else {
+        // Asset이 없는 경우 로그
+        if (index === 0 && performance.now() % 2000 < 16) {
+          console.warn(`[Game3D] NO ASSET for ${player.character}. Available:`, Object.keys(characterAssetsRef.current));
+        }
       }
     });
   };
 
   return (
-    <div className="relative w-full h-full bg-slate-900">
+    <div className="relative w-full h-full bg-slate-900" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* 3D 렌더러 컨테이너 */}
       <div
         ref={containerRef}
         style={{
           width: '100%',
           height: '100%',
-          position: 'relative'
+          position: 'relative',
+          flex: '1 1 auto',
+          minHeight: 0,
+          display: 'block'
         }}
         data-testid="game-3d-container"
       />

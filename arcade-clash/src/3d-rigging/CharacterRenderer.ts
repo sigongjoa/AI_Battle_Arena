@@ -44,7 +44,12 @@ export class CharacterRenderer {
 
     // Scene 생성
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(backgroundColor);
+    // 배경을 밝은 색으로 설정하여 플레이스홀더가 보이도록 함
+    const bgColor = backgroundColor === 0x1a1a1a ? 0x0a1929 : backgroundColor;
+    this.scene.background = new THREE.Color(bgColor);
+    console.log(`[CharacterRenderer] Constructor started, container:`, container);
+    console.log(`[CharacterRenderer] Container dimensions: ${container.clientWidth}x${container.clientHeight}`);
+    console.log(`[CharacterRenderer] Scene background color: 0x${bgColor.toString(16)}`);
 
     // OrthographicCamera 설정 (정면 2D 뷰)
     const aspect = width / height;
@@ -105,11 +110,48 @@ export class CharacterRenderer {
    * @param mesh SkinnedMesh 객체
    */
   addCharacterMesh(mesh: THREE.SkinnedMesh): void {
-    // 캐릭터를 씬 중앙에 배치
-    mesh.position.set(0, 0, 0);
+    // 메시 크기 확인 (디버그용)
+    const bbox = new THREE.Box3().setFromObject(mesh);
+    const size = bbox.getSize(new THREE.Vector3());
+    console.log(`[CharacterRenderer] Mesh size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+    console.log(`[CharacterRenderer] Mesh bounds: ${bbox.min.x.toFixed(2)}, ${bbox.min.y.toFixed(2)}, ${bbox.min.z.toFixed(2)} ~ ${bbox.max.x.toFixed(2)}, ${bbox.max.y.toFixed(2)}, ${bbox.max.z.toFixed(2)}`);
+
+    // STEP 1: 원래 중심 Y 계산 (스케일 하기 전)
+    const originalCenterY = (bbox.min.y + bbox.max.y) / 2;
+    console.log(`[CharacterRenderer] Original center Y: ${originalCenterY.toFixed(2)}`);
+
+    // STEP 2: 메시를 보이는 크기로 스케일 조정 (FBX가 너무 작을 수 있음)
+    const targetHeight = 200; // 200 단위 높이로 설정
+    const scale = targetHeight / size.y;
+    mesh.scale.multiplyScalar(scale);
+    console.log(`[CharacterRenderer] Applied scale: ${scale.toFixed(2)}x`);
+
+    // STEP 3: 메시의 위치를 스케일된 중심 Y의 반대로 설정
+    // 스케일 후 메시의 중심은 originalCenterY * scale이 됨
+    // 이를 0으로 이동하려면: mesh.position.y = -(originalCenterY * scale)
+    mesh.position.y = -(originalCenterY * scale);
+    console.log(`[CharacterRenderer] Centered mesh at Y=0, offset: ${mesh.position.y.toFixed(2)}`);
+
     mesh.receiveShadow = true;
     mesh.castShadow = true;
     this.scene.add(mesh);
+
+    // DEBUG: 메시 옆에 눈에 띄는 빨간 상자 추가 (렌더링이 작동하는지 확인)
+    const debugBox = new THREE.Mesh(
+      new THREE.BoxGeometry(100, 100, 100),
+      new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        metalness: 0,
+        roughness: 0.5,
+        emissive: 0xff0000,
+        emissiveIntensity: 0.5
+      })
+    );
+    debugBox.position.set(mesh.position.x + 200, mesh.position.y, mesh.position.z);
+    debugBox.castShadow = true;
+    debugBox.receiveShadow = true;
+    this.scene.add(debugBox);
+    console.log(`[CharacterRenderer] Added debug red box at (${debugBox.position.x}, ${debugBox.position.y}, ${debugBox.position.z})`);
 
     // 뼈 위치 확인 (디버그용)
     if (mesh.skeleton && mesh.skeleton.bones) {
@@ -128,6 +170,17 @@ export class CharacterRenderer {
     mixer: THREE.AnimationMixer,
     onFrame?: (deltaTime: number, fps: number) => void
   ): void {
+    // 시작 전 진단
+    console.log(`[CharacterRenderer] startAnimationLoop called`);
+    console.log(`[CharacterRenderer] Scene children count: ${this.scene.children.length}`);
+    console.log(`[CharacterRenderer] Canvas element:`, this.renderer.domElement);
+    console.log(`[CharacterRenderer] Canvas in DOM:`, document.contains(this.renderer.domElement));
+    console.log(`[CharacterRenderer] Canvas size:`, this.renderer.getSize(new THREE.Vector2()));
+    console.log(`[CharacterRenderer] Camera type:`, this.camera.type);
+    console.log(`[CharacterRenderer] Camera position:`, this.camera.position);
+    console.log(`[CharacterRenderer] Camera zoom:`, this.camera.zoom);
+
+    let renderCount = 0;
     const animate = () => {
       this.animationFrameId = requestAnimationFrame(animate);
 
@@ -148,6 +201,11 @@ export class CharacterRenderer {
         onFrame(deltaTime, this.fps);
       }
 
+      // 렌더링 진행
+      renderCount++;
+      if (renderCount === 1 || renderCount % 300 === 0) {
+        console.log(`[CharacterRenderer] Rendering frame ${renderCount}, objects in scene: ${this.scene.children.length}`);
+      }
       this.renderer.render(this.scene, this.camera);
     };
 
