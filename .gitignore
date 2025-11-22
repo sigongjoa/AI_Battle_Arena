@@ -32,6 +32,10 @@ test_models/
 *.zip
 *.mp4
 
+# Large asset files (FBX models)
+asset/
+*.fbx
+
 # Logs and data
 logs/
 save/
