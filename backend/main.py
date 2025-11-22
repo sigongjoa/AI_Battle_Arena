@@ -25,7 +25,7 @@ connected_peers: dict[str, WebSocket] = {}
 # CORS (Cross-Origin Resource Sharing) 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5174"],  # Explicitly allow the frontend origin
+    allow_origins=["http://localhost:5174", "http://localhost:5176"],  # Explicitly allow the frontend origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,7 +40,8 @@ logger.info("API router included with prefix /api")
 async def websocket_endpoint(websocket: WebSocket, peer_id: str):
     # Manually check the origin for WebSocket connections
     origin = websocket.headers.get("origin")
-    if origin is not None and origin != "http://localhost:5174":
+    allowed_origins = ["http://localhost:5174", "http://localhost:5176"]
+    if origin is not None and origin not in allowed_origins:
         await websocket.close(code=1008)  # Policy Violation
         logger.warning(f"[Signaling] DENIED: Unauthorized origin: {origin}")
         return

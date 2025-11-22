@@ -69,7 +69,7 @@ export class CharacterRenderer {
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     container.appendChild(this.renderer.domElement);
 
@@ -117,41 +117,48 @@ export class CharacterRenderer {
     console.log(`[CharacterRenderer] Mesh bounds: ${bbox.min.x.toFixed(2)}, ${bbox.min.y.toFixed(2)}, ${bbox.min.z.toFixed(2)} ~ ${bbox.max.x.toFixed(2)}, ${bbox.max.y.toFixed(2)}, ${bbox.max.z.toFixed(2)}`);
 
     // STEP 1: 원래 중심 Y 계산 (스케일 하기 전)
-    const originalCenterY = (bbox.min.y + bbox.max.y) / 2;
-    console.log(`[CharacterRenderer] Original center Y: ${originalCenterY.toFixed(2)}`);
+    // const originalCenterY = (bbox.min.y + bbox.max.y) / 2;
+    // console.log(`[CharacterRenderer] Original center Y: ${originalCenterY.toFixed(2)}`);
 
     // STEP 2: 메시를 보이는 크기로 스케일 조정 (FBX가 너무 작을 수 있음)
-    const targetHeight = 200; // 200 단위 높이로 설정
-    const scale = targetHeight / size.y;
-    mesh.scale.multiplyScalar(scale);
-    console.log(`[CharacterRenderer] Applied scale: ${scale.toFixed(2)}x`);
+    // const targetHeight = 350; // 350 단위 높이로 설정 (화면의 약 60%)
+    // const scale = targetHeight / size.y;
+    // mesh.scale.multiplyScalar(scale);
+    // console.log(`[CharacterRenderer] Applied scale: ${scale.toFixed(2)}x`);
 
-    // STEP 3: 메시의 위치를 스케일된 중심 Y의 반대로 설정
-    // 스케일 후 메시의 중심은 originalCenterY * scale이 됨
-    // 이를 0으로 이동하려면: mesh.position.y = -(originalCenterY * scale)
-    mesh.position.y = -(originalCenterY * scale);
-    console.log(`[CharacterRenderer] Centered mesh at Y=0, offset: ${mesh.position.y.toFixed(2)}`);
+    // FORCE SCALE for debugging
+    const forcedScale = 1.0;
+    mesh.scale.set(forcedScale, forcedScale, forcedScale);
+    console.log(`[CharacterRenderer] FORCED scale to ${forcedScale}`);
+
+    // STEP 3: 메시 지오메트리의 중심을 mesh.position의 원점으로 이동
+    // mesh.geometry.translate(0, -originalCenterY, 0);
+    // console.log(`[CharacterRenderer] Translated geometry by Y offset: ${-originalCenterY.toFixed(2)}`);
+
+    // Reset position just in case
+    mesh.position.set(0, 0, 0);
 
     mesh.receiveShadow = true;
     mesh.castShadow = true;
     this.scene.add(mesh);
 
-    // DEBUG: 메시 옆에 눈에 띄는 빨간 상자 추가 (렌더링이 작동하는지 확인)
-    const debugBox = new THREE.Mesh(
-      new THREE.BoxGeometry(100, 100, 100),
-      new THREE.MeshStandardMaterial({
-        color: 0xff0000,
-        metalness: 0,
-        roughness: 0.5,
-        emissive: 0xff0000,
-        emissiveIntensity: 0.5
-      })
-    );
-    debugBox.position.set(mesh.position.x + 200, mesh.position.y, mesh.position.z);
-    debugBox.castShadow = true;
-    debugBox.receiveShadow = true;
-    this.scene.add(debugBox);
-    console.log(`[CharacterRenderer] Added debug red box at (${debugBox.position.x}, ${debugBox.position.y}, ${debugBox.position.z})`);
+    // --- DEBUG: Add reference cubes to verify scene scale and visibility ---
+    // Red Cube at (0,0,0) - Center
+    const debugGeo = new THREE.BoxGeometry(50, 50, 50);
+    const debugMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const debugCube = new THREE.Mesh(debugGeo, debugMat);
+    debugCube.position.set(0, 0, 0);
+    this.scene.add(debugCube);
+    console.log('[CharacterRenderer] Added DEBUG RED CUBE at (0,0,0) size 50');
+
+    // Green Cube at (0, 100, 0) - Height reference
+    const debugGeo2 = new THREE.BoxGeometry(20, 20, 20);
+    const debugMat2 = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const debugCube2 = new THREE.Mesh(debugGeo2, debugMat2);
+    debugCube2.position.set(0, 100, 0);
+    this.scene.add(debugCube2);
+    console.log('[CharacterRenderer] Added DEBUG GREEN CUBE at (0,100,0) size 20');
+    // ---------------------------------------------------------------------
 
     // 뼈 위치 확인 (디버그용)
     if (mesh.skeleton && mesh.skeleton.bones) {
@@ -166,26 +173,30 @@ export class CharacterRenderer {
    * @param mixer AnimationMixer 객체
    * @param onFrame 각 프레임마다 실행할 콜백 함수
    */
+  /**
+   * 애니메이션 업데이트 루프 시작
+   * @param mixers AnimationMixer 객체 또는 객체 배열
+   * @param onFrame 각 프레임마다 실행할 콜백 함수
+   */
   startAnimationLoop(
-    mixer: THREE.AnimationMixer,
+    mixers: THREE.AnimationMixer | THREE.AnimationMixer[],
     onFrame?: (deltaTime: number, fps: number) => void
   ): void {
     // 시작 전 진단
     console.log(`[CharacterRenderer] startAnimationLoop called`);
     console.log(`[CharacterRenderer] Scene children count: ${this.scene.children.length}`);
-    console.log(`[CharacterRenderer] Canvas element:`, this.renderer.domElement);
-    console.log(`[CharacterRenderer] Canvas in DOM:`, document.contains(this.renderer.domElement));
-    console.log(`[CharacterRenderer] Canvas size:`, this.renderer.getSize(new THREE.Vector2()));
-    console.log(`[CharacterRenderer] Camera type:`, this.camera.type);
-    console.log(`[CharacterRenderer] Camera position:`, this.camera.position);
-    console.log(`[CharacterRenderer] Camera zoom:`, this.camera.zoom);
+
+    const mixerArray = Array.isArray(mixers) ? mixers : [mixers];
+    console.log(`[CharacterRenderer] Managing ${mixerArray.length} mixers`);
 
     let renderCount = 0;
     const animate = () => {
       this.animationFrameId = requestAnimationFrame(animate);
 
       const deltaTime = this.clock.getDelta();
-      mixer.update(deltaTime);
+
+      // 모든 믹서 업데이트
+      mixerArray.forEach(mixer => mixer.update(deltaTime));
 
       // FPS 계산
       this.frameCount++;

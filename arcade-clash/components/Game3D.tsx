@@ -92,7 +92,10 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
 
         for (const characterName of characterNames) {
           if (characterAssetsRef.current[characterName]) {
-            continue; // 이미 로드됨
+            // 이미 로드된 캐릭터라도 새로운 렌더러(Scene)에 추가해야 함
+            // addCharacterMesh는 스케일/위치 조정을 다시 하므로 사용하면 안됨 (이미 조정됨)
+            rendererRef.current!.addToScene(characterAssetsRef.current[characterName].mesh);
+            continue;
           }
 
           try {
@@ -133,6 +136,15 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
             };
 
             console.log(`[Game3D] ✅ Loaded character: ${characterName}`);
+
+            // 애니메이션 재생 (있는 경우)
+            if (character.animations.length > 0) {
+              const animName = character.animations[0].name;
+              console.log(`[Game3D] Playing animation for ${characterName}: ${animName} (available: ${character.animations.map(a => a.name).join(', ')})`);
+              loader.playAnimation(character, animName);
+            } else {
+              console.warn(`[Game3D] No animations found for ${characterName}`);
+            }
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             console.error(`[Game3D] Failed to load character ${characterName}: ${errorMessage}`);
@@ -169,15 +181,16 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
           .map(asset => asset.mixer)
           .filter(mixer => mixer !== null);
 
-        // mixer가 없어도 항상 렌더링 루프 시작 (placeholder의 경우 mixer가 null)
-        const mixerToUse = mixers.length > 0
-          ? mixers[0]
-          : new THREE.AnimationMixer(new THREE.Object3D());
+        // mixer가 없어도 항상 렌더링 루프 시작
+        // CharacterRenderer가 이제 배열을 받아 처리함
+        const mixersToUse = mixers.length > 0
+          ? mixers
+          : [new THREE.AnimationMixer(new THREE.Object3D())];
 
         // 애니메이션 루프 시작 전 asset 상태 확인
         logAssetState('BEFORE animation loop start');
 
-        rendererRef.current!.startAnimationLoop(mixerToUse, (deltaTime, currentFps) => {
+        rendererRef.current!.startAnimationLoop(mixersToUse, (deltaTime, currentFps) => {
           setFps(Math.round(currentFps));
           // 위치 업데이트는 별도의 useEffect에서 처리됨 (line 230-240)
         });
@@ -258,13 +271,15 @@ const Game3D: React.FC<Game3DProps> = ({ gameState, player1, player2, characterF
           console.log(`[Game3D] UPDATE ${player.character}: pos(${newX.toFixed(2)}, ${asset.mesh.position.y.toFixed(2)}, ${newZ}), health=${player.health}, action=${player.action}`);
         }
 
-        // 액션에 따른 애니메이션 업데이트 (간단한 구현)
-        // 실제로는 애니메이션 클립을 플레이해야 함
+        // 액션에 따른 애니메이션 업데이트
+        // 실제 애니메이션 클립이 재생 중이므로 절차적 회전은 비활성화
+        /*
         if (player.action === 'punch') {
           asset.mesh.rotation.z = Math.sin(performance.now() / 100) * 0.2;
         } else {
           asset.mesh.rotation.z *= 0.95;
         }
+        */
       } else {
         // Asset이 없는 경우 로그
         if (index === 0 && performance.now() % 2000 < 16) {

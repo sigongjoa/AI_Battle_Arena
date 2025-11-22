@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(__NEW_LINE__ cd /mnt/d/progress/AI_Battle_Arena)",
+      "Bash(__NEW_LINE__ ls -lh /mnt/d/progress/AI_Battle_Arena/)",
+      "Bash(python3:*)",
+      "Bash(__NEW_LINE__ pip install pytest pytest-cov pytest-html coverage playwright -q --upgrade)",
+      "Bash(__NEW_LINE__ pip install pytest pytest-cov pytest-html coverage playwright --break-system-packages -q)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(tee:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(ss:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(pkill:*)",
+      "Bash(kill:*)",
+      "Bash(PYTHONPATH=. python -m pytest:*)",
+      "WebSearch",
+      "Bash(xargs -I {} sh -c 'echo \"\"\"\"📄 {}\"\"\"\"; head -3 {}')",
+      "Bash(cat:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(lsof:*)",
+      "Bash(1)",
+      "WebFetch(domain:open3dmodel.com)",
+      "WebFetch(domain:sketchfab.com)",
+      "WebFetch(domain:www.mixamo.com)",
+      "Bash(1 cat /tmp/full-render-log.txt)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

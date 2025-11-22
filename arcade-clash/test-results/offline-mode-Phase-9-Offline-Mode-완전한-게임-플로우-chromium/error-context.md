@@ -30,8 +30,8 @@
           - generic:
             - generic: "HP: 100/100"
     - generic:
-      - generic: "FPS: 1"
-      - generic: "Load: 1425ms"
+      - generic: "FPS: 59"
+      - generic: "Load: 1303ms"
     - generic:
       - generic: "P1: ← → + Space"
       - generic: "P2: A/D + W"
